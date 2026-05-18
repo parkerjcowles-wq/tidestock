@@ -96,7 +96,113 @@ with tab1:
 with tab2:
     st.info("Social Intelligence — coming in Task 12")
 with tab3:
-    st.info("Scenario Simulator — coming in Task 10")
+    st.markdown("### 🎛️ Scenario Simulator")
+    st.caption("Adjust signal weights to see how demand forecasts change in real time.")
+
+    from inventory.forecast import compute_demand_index, compute_scenario_demand
+    from inventory.data import load_inventory
+    from charts.scenario import build_scenario_comparison
+
+    # ── Mode A: Signal Weighting ─────────────────────────────────────────
+    st.markdown("#### Mode A — Signal Weight Sliders")
+    st.caption("Drag sliders to control how much each signal influences this week's demand forecast.")
+
+    col_sliders, col_chart = st.columns([1, 2])
+    with col_sliders:
+        weights = {
+            "moon":       st.slider("🌙 Moon Phase",      0.0, 1.0, 1.0, 0.1),
+            "tide":       st.slider("🌊 Tide Quality",    0.0, 1.0, 1.0, 0.1),
+            "social":     st.slider("📡 Social Velocity", 0.0, 1.0, 1.0, 0.1),
+            "pressure":   st.slider("🌀 Pressure",        0.0, 1.0, 1.0, 0.1),
+            "tournament": st.slider("🏆 Tournament",      0.0, 1.0, 1.0, 0.1),
+            "season":     st.slider("📅 Season",          0.0, 1.0, 1.0, 0.1),
+        }
+
+    # Load conditions for current signal states
+    cond = load_conditions()
+    inv = load_inventory()
+    base_demands = {k: v["avg_weekly_demand"] for k, v in inv.items()}
+
+    # Compute per-SKU demand with custom weights
+    month = datetime.date.today().month
+    season_map = {1: "off", 2: "off", 3: "shoulder", 4: "shoulder", 5: "peak",
+                  6: "peak", 7: "shoulder", 8: "shoulder", 9: "peak", 10: "peak",
+                  11: "shoulder", 12: "off"}
+
+    weighted_demands = {
+        sku: compute_demand_index(
+            base_demand=base,
+            moon_phase=cond["today_phase"],
+            tide_quality=cond["tide_quality"],
+            social_velocity="baseline",  # updated in Task 12 after Reddit is live
+            pressure_trend=cond["weather"]["pressure_trend"],
+            tournament_proximity="none",
+            season_level=season_map.get(month, "shoulder"),
+            weights=weights,
+        )
+        for sku, base in base_demands.items()
+    }
+
+    with col_chart:
+        st.plotly_chart(
+            build_scenario_comparison(base_demands, weighted_demands, config.SKU_CATEGORIES),
+            use_container_width=True,
+        )
+
+    # Demand narrative
+    avg_multiplier = sum(weighted_demands.values()) / sum(base_demands.values())
+    st.markdown(
+        f"**Demand Index:** `{avg_multiplier:.2f}×` baseline — "
+        f"{'above' if avg_multiplier > 1.1 else 'below' if avg_multiplier < 0.9 else 'near'} normal"
+    )
+
+    # ── Mode B: Scenario Toggles ──────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("#### Mode B — Preset Scenario Toggles")
+
+    SCENARIO_LABELS = {
+        "tournament_weekend": "🏆 Tournament This Weekend",
+        "viral_bait_moment":  "🔥 Viral Bait Moment",
+        "cold_front":         "🧊 Cold Front Incoming",
+        "striper_run_peak":   "🐟 Striper Run Peak",
+    }
+    SCENARIO_DESCRIPTIONS = {
+        "tournament_weekend": "Local bass tournament drives finesse tackle and soft plastic demand up sharply.",
+        "viral_bait_moment":  "A bait is going viral on Reddit/YouTube — soft plastic demand 3× baseline.",
+        "cold_front":         "Cold front suppresses activity — live bait and soft plastics drop 30–40%.",
+        "striper_run_peak":   "Striper migration peak — paddle tails and bucktails in high demand.",
+    }
+
+    active_scenario = st.radio("Select a scenario", list(SCENARIO_LABELS.keys()),
+                               format_func=lambda k: SCENARIO_LABELS[k], index=None)
+
+    if active_scenario:
+        st.caption(SCENARIO_DESCRIPTIONS[active_scenario])
+        scenario_demands = compute_scenario_demand(base_demands, active_scenario)
+        st.plotly_chart(
+            build_scenario_comparison(base_demands, scenario_demands, config.SKU_CATEGORIES),
+            use_container_width=True,
+        )
+        # Delta table
+        import pandas as pd
+        delta_rows = [
+            {
+                "Category": config.SKU_CATEGORIES[k],
+                "Baseline (units/wk)": f"{base_demands[k]:.0f}",
+                "Scenario (units/wk)": f"{scenario_demands.get(k, base_demands[k]):.0f}",
+                "Change": f"+{scenario_demands.get(k, base_demands[k]) - base_demands[k]:.0f}"
+                          if scenario_demands.get(k, base_demands[k]) >= base_demands[k]
+                          else f"{scenario_demands.get(k, base_demands[k]) - base_demands[k]:.0f}",
+            }
+            for k in base_demands
+        ]
+        st.dataframe(pd.DataFrame(delta_rows), use_container_width=True, hide_index=True)
+
+        # Store active scenario in session state for AI brief
+        st.session_state["active_scenario"] = active_scenario
+        st.session_state["active_scenario_label"] = SCENARIO_LABELS[active_scenario]
+    else:
+        st.session_state.pop("active_scenario", None)
 with tab4:
     st.markdown("### 📦 Inventory Status & Reorder Recommendations")
 
