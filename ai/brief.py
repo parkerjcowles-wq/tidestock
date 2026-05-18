@@ -1,0 +1,64 @@
+import os
+import anthropic
+import config
+
+
+def build_brief_prompt(
+    conditions: dict,
+    inventory_summary: dict,
+    social_velocity: str,
+    trend_alerts: list,
+    tournaments: list,
+    active_scenario: str = None,
+    service_level: float = 0.95,
+) -> str:
+    scenario_line = f"\nACTIVE SCENARIO: {active_scenario}" if active_scenario else ""
+    tournament_line = (
+        "Upcoming tournaments: " + ", ".join(t["title"][:50] for t in tournaments[:2])
+        if tournaments else "No tournaments in near-term calendar."
+    )
+    trend_line = ", ".join(trend_alerts) if trend_alerts else "No significant trend spikes."
+    inv_lines = "\n".join(
+        f"  {label}: {summary['dos']:.0f} days of supply ({summary['urgency']})"
+        for label, summary in inventory_summary.items()
+    )
+    return f"""You are a senior buyer at a New England bait shop preparing the Monday morning planning brief.
+Write a concise S&OP-style memo (200–250 words) using ONLY the data below.
+Use planning language: recommend, signal, risk, action required.
+Format with these sections: Conditions Outlook | Hot SKUs This Week | Reorder Actions | Risk Watch
+
+LOCATION: {config.SHOP_REGION}
+DATE: {conditions.get('date', 'today')}
+
+ENVIRONMENTAL CONDITIONS:
+  Moon phase: {conditions.get('moon_phase', 'unknown').replace('_', ' ')}
+  Tide quality: {conditions.get('tide_quality', 'moderate')}
+  Barometric pressure: {conditions.get('pressure_trend', 'stable')}
+  Water temperature: {conditions.get('water_temp', 55):.1f}°F
+  Fishing score: {conditions.get('fishing_score', 70)}/100
+
+SPECIES ACTIVITY: {', '.join(f"{sp}: {lvl}" for sp, lvl in conditions.get('species', {}).items())}
+
+SOCIAL SIGNALS:
+  Overall velocity: {social_velocity}
+  Google Trends alerts: {trend_line}
+  {tournament_line}
+
+INVENTORY STATUS (days of supply):
+{inv_lines}
+
+TARGET SERVICE LEVEL: {int(service_level * 100)}%
+{scenario_line}
+
+Write the planning brief now:"""
+
+
+def generate_brief_streaming(prompt: str):
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    with client.messages.stream(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stream:
+        for text in stream.text_stream:
+            yield text
