@@ -4,9 +4,6 @@ pandas==2.2.2
 ephem==4.1.5
 praw==7.7.1
 pytrends==4.9.2
-anthropic==0.28.0
+anthropic==0.40.0
 requests==2.32.3
 python-dotenv==1.0.1
-pytest==8.2.2
-pytest-mock==3.14.0
-responses==0.25.3

@@ -2,7 +2,7 @@
 SHOP_LAT = 42.8126
 SHOP_LON = -70.8773
 SHOP_REGION = "Newburyport, MA"
-NOAA_STATION_ID = "8419317"  # Portland, ME — closest major station; verify at tidesandcurrents.noaa.gov
+NOAA_STATION_ID = "8440625"  # Gloucester, MA — ~15 miles from Newburyport; verify at tidesandcurrents.noaa.gov
 DEFAULT_LEAD_TIME_DAYS = 5
 DEFAULT_SERVICE_LEVEL = 0.95
 
@@ -15,7 +15,10 @@ SKU_CATEGORIES = {
     "accessories": "Accessories",
 }
 
-FISHING_KEYWORDS = ["paddle tail", "ned rig", "bucktail", "crankbait", "topwater"]
+FISHING_KEYWORDS = [
+    "paddle tail", "ned rig", "bucktail", "crankbait", "topwater",
+    "striper", "sandeel", "bunker", "fluke", "porgy"
+]
 REDDIT_SUBREDDITS = ["fishing", "bassfishing", "stripers", "kayakfishing"]
 
 SPECIES_CALENDAR = {

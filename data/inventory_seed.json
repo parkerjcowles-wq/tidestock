@@ -1,4 +1,5 @@
 {
+  "_version": 1,
   "soft_plastics":   {"on_hand": 240, "unit": "packs",  "avg_weekly_demand": 35, "order_cost": 12, "holding_cost": 0.50},
   "hard_baits":      {"on_hand": 85,  "unit": "lures",  "avg_weekly_demand": 12, "order_cost": 15, "holding_cost": 1.20},
   "live_bait":       {"on_hand": 180, "unit": "dozen",  "avg_weekly_demand": 45, "order_cost": 8,  "holding_cost": 0.30},
