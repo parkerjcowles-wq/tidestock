@@ -74,6 +74,14 @@ button[data-baseweb="tab"][aria-selected="true"] {
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<div style="padding:16px 0 8px">
+    <span style="font-size:28px;font-weight:700;color:#f1f5f9">🎣 TideStock</span>
+    <span style="font-size:14px;color:#64748b;margin-left:12px">Bait Shop Demand Intelligence</span>
+</div>
+<div style="height:1px;background:#1e293b;margin-bottom:16px"></div>
+""", unsafe_allow_html=True)
+
 # ── Data loading (cached) ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def load_conditions():
