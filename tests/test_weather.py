@@ -12,12 +12,16 @@ MOCK_WEATHER = {
 
 @resp_mock.activate
 def test_fetch_weather_returns_expected_keys():
+    import pandas as pd
     resp_mock.add(resp_mock.GET, "https://api.open-meteo.com/v1/forecast",
                   json=MOCK_WEATHER, status=200)
     result = fetch_weather(42.8126, -70.8773)
     assert "pressure_series" in result
     assert "current_temp_f" in result
     assert "pressure_trend" in result
+    assert isinstance(result["pressure_series"], pd.DataFrame)
+    assert list(result["pressure_series"].columns) == ["time", "pressure"]
+    assert len(result["pressure_series"]) == 3
 
 def test_classify_falling():
     assert classify_pressure_trend([1015, 1013, 1010]) == "falling"
