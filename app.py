@@ -94,7 +94,69 @@ with tab1:
 
 # Remaining tabs — stubs (built in later tasks)
 with tab2:
-    st.info("Social Intelligence — coming in Task 12")
+    st.markdown("### 📡 Social Intelligence")
+    st.caption("What's buzzing in fishing communities right now — before it hits your counter.")
+
+    from signals.reddit_signals import fetch_reddit_signals, get_overall_social_velocity
+    from signals.trends import fetch_trends_data, get_trending_keywords
+    from signals.tournament import fetch_tournaments
+    from charts.reddit_feed import build_reddit_feed_html
+    from charts.trends_chart import build_trends_chart
+
+    @st.cache_data(ttl=1800)
+    def load_social():
+        posts = fetch_reddit_signals(limit=15)
+        trend_kws = get_trending_keywords(config.FISHING_KEYWORDS)
+        try:
+            trend_df = fetch_trends_data(config.FISHING_KEYWORDS)
+        except Exception:
+            trend_df = None
+        tournaments = fetch_tournaments(config.SHOP_REGION)
+        velocity = get_overall_social_velocity(posts)
+        return posts, trend_kws, trend_df, tournaments, velocity
+
+    posts, trend_kws, trend_df, tournaments, velocity = load_social()
+
+    # Update session state so Scenario Sim can use live velocity
+    st.session_state["social_velocity"] = velocity
+
+    # Trend Alert chips
+    alerts = [k for k in trend_kws if k["velocity"] in ("trending", "elevated")]
+    if alerts:
+        st.markdown("**🚨 Trend Alerts**")
+        chips = " ".join(
+            f'<span class="signal-chip" style="background:#450a0a;color:#fca5a5">🔴 {a["keyword"].title()} +{a["pct_change"]}%</span>'
+            if a["velocity"] == "trending" else
+            f'<span class="signal-chip" style="background:#422006;color:#fde68a">🟡 {a["keyword"].title()} +{a["pct_change"]}%</span>'
+            for a in alerts
+        )
+        st.markdown(chips, unsafe_allow_html=True)
+
+    col_left, col_right = st.columns([1, 1])
+
+    with col_left:
+        st.markdown(f"**Reddit Fishing Feed** — Overall velocity: `{velocity}`")
+        st.markdown(build_reddit_feed_html(posts), unsafe_allow_html=True)
+
+    with col_right:
+        st.markdown("**Google Trends (90-day)**")
+        if trend_df is not None and not trend_df.empty:
+            st.plotly_chart(build_trends_chart(trend_df, config.FISHING_KEYWORDS),
+                            use_container_width=True)
+        else:
+            st.warning("Google Trends data unavailable (rate limited). Try again in a few minutes.")
+
+        # Tournament calendar
+        st.markdown("**Upcoming Tournaments**")
+        if tournaments:
+            for t in tournaments:
+                st.markdown(
+                    f'<div class="metric-card"><div style="color:#fbbf24;font-size:13px">🏆 {t["title"][:70]}</div>'
+                    f'<a href="{t["url"]}" style="color:#64748b;font-size:11px">Source ↗</a></div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.caption("No upcoming tournaments found for your region.")
 with tab3:
     st.markdown("### 🎛️ Scenario Simulator")
     st.caption("Adjust signal weights to see how demand forecasts change in real time.")
