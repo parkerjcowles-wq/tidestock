@@ -1,5 +1,5 @@
 import os
-import anthropic
+import groq
 import config
 
 
@@ -54,11 +54,14 @@ Write the planning brief now:"""
 
 
 def generate_brief_streaming(prompt: str):
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    with client.messages.stream(
-        model="claude-haiku-4-5-20251001",
+    client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
+    stream = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
         max_tokens=512,
         messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        for text in stream.text_stream:
+        stream=True,
+    )
+    for chunk in stream:
+        text = chunk.choices[0].delta.content
+        if text:
             yield text
