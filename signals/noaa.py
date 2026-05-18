@@ -4,18 +4,7 @@ import datetime
 
 _BASE = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
 
-def fetch_tide_predictions(station_id, days=7):
-    # type: (str, int) -> pd.DataFrame
-    """
-    Fetch tide predictions from NOAA for the given station.
-
-    Args:
-        station_id: NOAA station ID (e.g., '8440625' for Gloucester, MA)
-        days: Number of days to fetch (default 7)
-
-    Returns:
-        DataFrame with 'time' and 'height' columns
-    """
+def fetch_tide_predictions(station_id: str, days: int = 7) -> pd.DataFrame:
     today = datetime.date.today()
     end = today + datetime.timedelta(days=days)
     params = {
@@ -32,23 +21,18 @@ def fetch_tide_predictions(station_id, days=7):
     }
     r = requests.get(_BASE, params=params, timeout=10)
     r.raise_for_status()
-    data = r.json().get("predictions", [])
+    payload = r.json()
+    if "error" in payload:
+        raise ValueError(payload["error"].get("message", "NOAA API error"))
+    data = payload.get("predictions", [])
+    if not data:
+        return pd.DataFrame(columns=["time", "height"])
     df = pd.DataFrame(data)
     df["time"] = pd.to_datetime(df["t"])
     df["height"] = df["v"].astype(float)
     return df[["time", "height"]]
 
-def fetch_water_temp(station_id):
-    # type: (str) -> float
-    """
-    Fetch water temperature from NOAA for the given station.
-
-    Args:
-        station_id: NOAA station ID (e.g., '8440625' for Gloucester, MA)
-
-    Returns:
-        Water temperature in Fahrenheit (float). Returns 55.0 if no data available.
-    """
+def fetch_water_temp(station_id: str) -> float:
     params = {
         "station": station_id,
         "product": "water_temperature",
@@ -61,40 +45,22 @@ def fetch_water_temp(station_id):
     }
     r = requests.get(_BASE, params=params, timeout=10)
     r.raise_for_status()
-    data = r.json().get("data", [])
+    payload = r.json()
+    if "error" in payload:
+        raise ValueError(payload["error"].get("message", "NOAA API error"))
+    data = payload.get("data", [])
     if not data:
         return 55.0  # fallback if station doesn't report temp
     return float(data[-1]["v"])
 
-def classify_tide_quality(max_range, num_peaks):
-    # type: (float, int) -> str
-    """
-    Classify tide quality based on range and number of peaks.
-
-    Args:
-        max_range: Maximum tide height range in feet
-        num_peaks: Number of tidal peaks in the period
-
-    Returns:
-        One of: 'prime', 'moderate', 'poor'
-    """
+def classify_tide_quality(max_range: float, num_peaks: int) -> str:
     if max_range >= 6.0 and num_peaks >= 2:
         return "prime"
     if max_range >= 3.0:
-        return "moderate"
+        return "moderate"  # range alone qualifies for moderate; peaks only matter for prime
     return "poor"
 
-def get_tide_quality(df):
-    # type: (pd.DataFrame) -> str
-    """
-    Compute tide quality from a tide predictions DataFrame.
-
-    Args:
-        df: DataFrame with 'height' column (from fetch_tide_predictions)
-
-    Returns:
-        One of: 'prime', 'moderate', 'poor'
-    """
+def get_tide_quality(df: pd.DataFrame) -> str:
     if df.empty:
         return "moderate"
     max_range = df["height"].max() - df["height"].min()

@@ -41,3 +41,24 @@ def test_classify_tide_quality_moderate():
 
 def test_classify_tide_quality_poor():
     assert classify_tide_quality(max_range=1.5, num_peaks=1) == "poor"
+
+@resp_mock.activate
+def test_fetch_tide_predictions_empty_response():
+    import pandas as pd
+    resp_mock.add(resp_mock.GET, "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+                  json={"predictions": []}, status=200)
+    df = fetch_tide_predictions("8440625", days=1)
+    assert isinstance(df, pd.DataFrame)
+    assert list(df.columns) == ["time", "height"]
+    assert len(df) == 0
+
+@resp_mock.activate
+def test_fetch_tide_predictions_noaa_error_body():
+    resp_mock.add(resp_mock.GET, "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter",
+                  json={"error": {"message": "No data was found"}}, status=200)
+    with pytest.raises(ValueError, match="No data was found"):
+        fetch_tide_predictions("9999999", days=1)
+
+def test_classify_tide_quality_moderate_ignores_peaks():
+    # moderate range qualifies regardless of peak count — only prime gates on peaks
+    assert classify_tide_quality(max_range=4.0, num_peaks=0) == "moderate"
