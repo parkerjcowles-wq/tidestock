@@ -325,4 +325,81 @@ with tab4:
     df_reorder = pd.DataFrame(reorder_rows)
     st.dataframe(df_reorder, use_container_width=True, hide_index=True)
 with tab5:
-    st.info("AI Planning Brief — coming in Task 16")
+    st.markdown("### 🤖 AI Planning Brief")
+    st.caption("Claude synthesizes all signals into a Monday morning buyer's memo.")
+
+    from ai.brief import build_brief_prompt, generate_brief_streaming
+    from inventory.model import days_of_supply, safety_stock, reorder_point, SERVICE_LEVEL_Z
+    from inventory.data import load_inventory, get_avg_daily_demand
+
+    cond = load_conditions()
+    inv = load_inventory()
+    month_now = datetime.date.today().month
+    species_activity = config.SPECIES_CALENDAR.get(month_now, {})
+
+    # Build inventory summary for prompt
+    lead_time = st.session_state.get("lead_time", config.DEFAULT_LEAD_TIME_DAYS)
+    service_pct = st.session_state.get("service_pct", config.DEFAULT_SERVICE_LEVEL)
+    z = SERVICE_LEVEL_Z[service_pct]
+    inv_summary = {}
+    for sku_key, label in config.SKU_CATEGORIES.items():
+        sku = inv[sku_key]
+        daily = get_avg_daily_demand(sku)
+        ss = safety_stock(daily, daily * 0.3, lead_time, z)
+        rop = reorder_point(daily, lead_time, ss)
+        dos = days_of_supply(sku["on_hand"], daily)
+        urgency = "Order Today" if dos < lead_time else "This Week" if dos < lead_time * 2 else "Monitor"
+        inv_summary[label] = {"dos": dos, "urgency": urgency}
+
+    social_velocity = st.session_state.get("social_velocity", "baseline")
+    trend_alerts = st.session_state.get("trend_alerts", [])
+    active_scenario = st.session_state.get("active_scenario_label", None)
+
+    # Signal chips
+    chip_data = [
+        ("🌙", cond["today_phase"].replace("_", " ").title()),
+        ("🌡️", f"{cond['water_temp']:.0f}°F"),
+        ("🌀", cond["weather"]["pressure_trend"].capitalize()),
+        ("📡", f"Social: {social_velocity}"),
+    ]
+    if active_scenario:
+        chip_data.append(("🎛️", active_scenario))
+
+    chips_html = " ".join(
+        f'<span class="signal-chip" style="background:#1e3a5f;color:#93c5fd">{icon} {label}</span>'
+        for icon, label in chip_data
+    )
+    st.markdown(chips_html, unsafe_allow_html=True)
+    st.markdown("")
+
+    if st.button("Generate Planning Brief", type="primary"):
+        conditions_ctx = {
+            "date": datetime.date.today().isoformat(),
+            "moon_phase": cond["today_phase"],
+            "tide_quality": cond["tide_quality"],
+            "pressure_trend": cond["weather"]["pressure_trend"],
+            "water_temp": cond["water_temp"],
+            "fishing_score": cond["fishing_score"],
+            "species": species_activity,
+        }
+        prompt = build_brief_prompt(
+            conditions=conditions_ctx,
+            inventory_summary=inv_summary,
+            social_velocity=social_velocity,
+            trend_alerts=trend_alerts,
+            tournaments=[],
+            active_scenario=active_scenario,
+            service_level=service_pct,
+        )
+        brief_placeholder = st.empty()
+        full_brief = ""
+        for chunk in generate_brief_streaming(prompt):
+            full_brief += chunk
+            brief_placeholder.markdown(
+                f'<div class="metric-card" style="line-height:1.7;font-size:14px">{full_brief}</div>',
+                unsafe_allow_html=True,
+            )
+        # Download button
+        st.download_button("📥 Download Brief", full_brief,
+                           file_name=f"tidestock-brief-{datetime.date.today()}.txt",
+                           mime="text/plain")
