@@ -8,19 +8,25 @@ _PRESSURE_BONUS = {"rising": 20, "stable": 0, "falling": -20}
 def get_moon_phase(date: datetime.date) -> str:
     m = ephem.Moon(date.isoformat())
     ill = m.moon_phase  # 0.0–1.0 illumination
-    # Determine waxing vs waning from next full moon distance
-    next_full = ephem.next_full_moon(date.isoformat()).datetime().date()
-    days_to_full = (next_full - date).days
-    waxing = days_to_full <= 14
 
     if ill < 0.02:
         return "new"
     if ill > 0.98:
         return "full"
+
+    # Determine waxing vs waning using next full vs next new moon
+    next_full = ephem.next_full_moon(date.isoformat()).datetime().date()
+    next_new = ephem.next_new_moon(date.isoformat()).datetime().date()
+    waxing = next_full < next_new  # full moon comes before new moon = waxing
+
+    # Quarter phases: illumination near 50% (±8% window)
+    if 0.42 < ill < 0.58:
+        return "first_quarter" if waxing else "last_quarter"
+
     if waxing:
         return "waxing_crescent" if ill < 0.5 else "waxing_gibbous"
     else:
-        return "waning_crescent" if ill < 0.5 else "waning_gibbous"
+        return "waning_gibbous" if ill > 0.5 else "waning_crescent"
 
 def get_fishing_score(moon_phase: str, pressure_trend: str) -> int:
     base = 90 if moon_phase in _PEAK_PHASES else 70 if "gibbous" in moon_phase else 50

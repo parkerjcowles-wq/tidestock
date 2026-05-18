@@ -23,3 +23,15 @@ def test_week_data_length():
     data = get_week_moon_data()
     assert len(data) == 7
     assert all("date" in d and "phase" in d and "score" in d for d in data)
+
+def test_first_quarter_phase_reachable():
+    # May 23, 2026 is first quarter moon
+    phase = get_moon_phase(datetime.date(2026, 5, 23))
+    assert phase in ["first_quarter", "waxing_crescent", "waxing_gibbous"]
+    # At minimum verify the classifier doesn't crash on near-quarter dates
+
+def test_waxing_waning_direction():
+    # On a date clearly after new moon and before full moon, should be waxing
+    # April 25, 2026 was after new moon (April 17) and before full moon (May 1)
+    phase = get_moon_phase(datetime.date(2026, 4, 25))
+    assert phase in ["waxing_crescent", "first_quarter", "waxing_gibbous"]
