@@ -16,14 +16,61 @@ st.set_page_config(page_title="TideStock", page_icon="🎣", layout="wide")
 # ── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+/* Global */
 [data-testid="stAppViewContainer"] { background: #0f172a; }
-.metric-card { background:#1e293b; border-radius:10px; padding:14px 18px; margin-bottom:8px; }
-.signal-chip { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; margin:3px; }
-.activity-peak   { background:#166534; color:#bbf7d0; }
-.activity-good   { background:#14532d; color:#86efac; }
-.activity-fair   { background:#713f12; color:#fde68a; }
-.activity-low    { background:#7c2d12; color:#fdba74; }
-.activity-inactive { background:#1f2937; color:#9ca3af; }
+[data-testid="stSidebar"] { background: #0f172a; }
+[data-testid="stHeader"] { background: transparent; }
+[data-testid="stTabsContent"] { padding-top: 16px; }
+
+/* Tab bar */
+button[data-baseweb="tab"] {
+    font-size: 13px !important;
+    padding: 8px 16px !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 2px solid #38bdf8 !important;
+    color: #38bdf8 !important;
+}
+
+/* Cards */
+.metric-card {
+    background: #1e293b;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 8px;
+    border: 1px solid #334155;
+}
+
+/* Signal chips */
+.signal-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 3px;
+}
+
+/* Species activity */
+.activity-peak     { background: #166534; color: #bbf7d0; }
+.activity-good     { background: #14532d; color: #86efac; }
+.activity-fair     { background: #713f12; color: #fde68a; }
+.activity-low      { background: #7c2d12; color: #fdba74; }
+.activity-inactive { background: #1f2937; color: #9ca3af; }
+
+/* Plotly charts — remove white bg */
+.js-plotly-plot .plotly .modebar { background: transparent !important; }
+
+/* Streamlit metric */
+[data-testid="stMetricValue"] { font-size: 1.6rem !important; color: #38bdf8; }
+[data-testid="stMetricLabel"] { color: #64748b !important; font-size: 12px !important; }
+
+/* Buttons */
+[data-testid="baseButton-primary"] {
+    background: linear-gradient(135deg, #0369a1, #0c4a6e) !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
