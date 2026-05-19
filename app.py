@@ -243,6 +243,8 @@ with tab3:
             "tournament": st.slider("🏆 Tournament",      0.0, 1.0, 1.0, 0.1),
             "season":     st.slider("📅 Season",          0.0, 1.0, 1.0, 0.1),
         }
+        weekend_boost = st.checkbox("📅 Weekend Boost (+25%)", value=False,
+                                    help="Weekends typically drive 20–30% higher foot traffic at bait shops.")
 
     # Load conditions for current signal states
     cond = load_conditions()
@@ -255,12 +257,13 @@ with tab3:
                   6: "peak", 7: "shoulder", 8: "shoulder", 9: "peak", 10: "peak",
                   11: "shoulder", 12: "off"}
 
+    boost = 1.25 if weekend_boost else 1.0
     weighted_demands = {
         sku: compute_demand_index(
-            base_demand=base,
+            base_demand=base * boost,
             moon_phase=cond["today_phase"],
             tide_quality=cond["tide_quality"],
-            social_velocity="baseline",  # updated in Task 12 after Reddit is live
+            social_velocity="baseline",
             pressure_trend=cond["weather"]["pressure_trend"],
             tournament_proximity="none",
             season_level=season_map.get(month, "shoulder"),
@@ -332,25 +335,38 @@ with tab3:
 with tab4:
     st.markdown("### 📦 Inventory Status & Reorder Recommendations")
 
-    lead_time = st.slider("Supplier Lead Time (days)", 1, 14, config.DEFAULT_LEAD_TIME_DAYS)
     service_pct = st.selectbox("Target Service Level", [0.85, 0.90, 0.95, 0.99],
                                 index=2, format_func=lambda x: f"{int(x*100)}%")
 
     from inventory.model import safety_stock, reorder_point, economic_order_quantity, days_of_supply, SERVICE_LEVEL_Z
-    from inventory.data import load_inventory, get_avg_daily_demand
+    from inventory.data import load_inventory, get_avg_daily_demand, get_std_daily_demand, get_lead_time
     from charts.inventory_gauges import build_gauge
     from charts.days_of_supply import build_dos_chart
 
     z = SERVICE_LEVEL_Z[service_pct]
     inventory = load_inventory()
+    cond4 = load_conditions()
+    month_now = datetime.date.today().month
+    species_now = config.SPECIES_CALENDAR.get(month_now, {})
+    striper_active = species_now.get("Striped Bass", "Inactive") in ("Peak", "Good")
+    fishing_score_now = cond4["fishing_score"]
+
+    SKU_SEASONAL_RELEVANCE = {
+        "soft_plastics": True, "bucktails_jigs": True,
+        "live_bait": True, "hard_baits": True,
+        "terminal_tackle": False, "accessories": False,
+    }
+
     dos_data = []
     reorder_rows = []
+    explainability = {}
 
     for sku_key, label in config.SKU_CATEGORIES.items():
         sku = inventory[sku_key]
         daily_demand = get_avg_daily_demand(sku)
-        std_demand = daily_demand * 0.3  # assume 30% demand variability
-        ss = safety_stock(daily_demand, std_demand, lead_time, z)
+        std_demand = get_std_daily_demand(sku)
+        lead_time = get_lead_time(sku, config.DEFAULT_LEAD_TIME_DAYS)
+        ss = safety_stock(std_demand, lead_time, z)
         rop = reorder_point(daily_demand, lead_time, ss)
         eoq = economic_order_quantity(
             sku["avg_weekly_demand"] * 52,
@@ -358,16 +374,42 @@ with tab4:
             sku["holding_cost"],
         )
         dos = days_of_supply(sku["on_hand"], daily_demand)
-        urgency = "Order Today" if dos < lead_time else "This Week" if dos < lead_time * 2 else "Monitor"
-        dos_data.append({"label": label, "dos": min(dos, 60), "urgency": urgency})
+
+        # Status
+        if dos < lead_time or sku["on_hand"] < rop * 0.5:
+            status = "🔴 Critical"
+        elif sku["on_hand"] < rop or dos < lead_time * 1.5:
+            status = "🟠 Reorder Soon"
+        elif dos < lead_time * 2 or sku["on_hand"] < rop * 1.2:
+            status = "🟡 Watch"
+        else:
+            status = "🟢 Healthy"
+
+        # Explainability reasons
+        reasons = []
+        if sku["on_hand"] < rop:
+            reasons.append("Below reorder point")
+        if dos < 14:
+            reasons.append(f"Low days of supply ({dos:.0f}d)")
+        if striper_active and SKU_SEASONAL_RELEVANCE.get(sku_key):
+            reasons.append(f"Striper season active ({species_now.get('Striped Bass')})")
+        if fishing_score_now >= 70:
+            reasons.append(f"Strong fishing signal ({fishing_score_now}/100)")
+        if lead_time >= 6:
+            reasons.append(f"Long supplier lead time ({lead_time}d)")
+        if std_demand > daily_demand * 0.35:
+            reasons.append("High demand volatility")
+        explainability[sku_key] = reasons
+
+        dos_data.append({"label": label, "dos": min(dos, 60), "urgency": status})
         reorder_rows.append({
-            "Category": label,
+            "SKU": label,
+            "Supplier": sku.get("supplier", "—"),
             "On Hand": f"{sku['on_hand']} {sku['unit']}",
-            "Days of Supply": f"{dos:.0f}d" if dos < 100 else "60d+",
-            "Safety Stock": f"{ss:.0f}",
-            "Reorder Point": f"{rop:.0f}",
+            "DoS": f"{dos:.0f}d" if dos < 100 else "60d+",
+            "ROP": f"{rop:.0f}",
             "EOQ": f"{eoq:.0f}",
-            "Urgency": urgency,
+            "Status": status,
         })
 
     # Gauges row
@@ -388,31 +430,40 @@ with tab4:
     import pandas as pd
     df_reorder = pd.DataFrame(reorder_rows)
     st.dataframe(df_reorder, use_container_width=True, hide_index=True)
+
+    # Explainability bullets
+    st.markdown("**Why These SKUs Are Flagged**")
+    for sku_key, label in config.SKU_CATEGORIES.items():
+        reasons = explainability.get(sku_key, [])
+        if reasons:
+            with st.expander(f"{label} — {len(reasons)} signal{'s' if len(reasons) > 1 else ''}"):
+                for r in reasons:
+                    st.markdown(f"- {r}")
 with tab5:
     st.markdown("### 🤖 AI Planning Brief")
     st.caption("Claude synthesizes all signals into a Monday morning buyer's memo.")
 
     from ai.brief import build_brief_prompt, generate_brief_streaming
     from inventory.model import days_of_supply, safety_stock, reorder_point, SERVICE_LEVEL_Z
-    from inventory.data import load_inventory, get_avg_daily_demand
+    from inventory.data import load_inventory, get_avg_daily_demand, get_std_daily_demand, get_lead_time
 
     cond = load_conditions()
     inv = load_inventory()
     month_now = datetime.date.today().month
     species_activity = config.SPECIES_CALENDAR.get(month_now, {})
 
-    # Build inventory summary for prompt
-    lead_time = st.session_state.get("lead_time", config.DEFAULT_LEAD_TIME_DAYS)
     service_pct = st.session_state.get("service_pct", config.DEFAULT_SERVICE_LEVEL)
     z = SERVICE_LEVEL_Z[service_pct]
     inv_summary = {}
     for sku_key, label in config.SKU_CATEGORIES.items():
         sku = inv[sku_key]
         daily = get_avg_daily_demand(sku)
-        ss = safety_stock(daily, daily * 0.3, lead_time, z)
-        rop = reorder_point(daily, lead_time, ss)
+        std = get_std_daily_demand(sku)
+        lt = get_lead_time(sku, config.DEFAULT_LEAD_TIME_DAYS)
+        ss = safety_stock(std, lt, z)
+        rop = reorder_point(daily, lt, ss)
         dos = days_of_supply(sku["on_hand"], daily)
-        urgency = "Order Today" if dos < lead_time else "This Week" if dos < lead_time * 2 else "Monitor"
+        urgency = "Order Today" if dos < lt else "This Week" if dos < lt * 2 else "Monitor"
         inv_summary[label] = {"dos": dos, "urgency": urgency}
 
     social_velocity = st.session_state.get("social_velocity", "baseline")

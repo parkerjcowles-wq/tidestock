@@ -11,3 +11,9 @@ def load_inventory() -> dict:
 
 def get_avg_daily_demand(sku_data: dict) -> float:
     return sku_data["avg_weekly_demand"] / 7
+
+def get_std_daily_demand(sku_data: dict) -> float:
+    return sku_data.get("std_daily_demand", sku_data["avg_weekly_demand"] / 7 * 0.3)
+
+def get_lead_time(sku_data: dict, fallback: int = 5) -> int:
+    return sku_data.get("lead_time_days", fallback)
