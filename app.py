@@ -82,6 +82,26 @@ st.markdown("""
 <div style="height:1px;background:#1e293b;margin-bottom:16px"></div>
 """, unsafe_allow_html=True)
 
+# ── Sidebar: What-If Controls ────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ What-If Controls")
+    st.caption("Adjust conditions to see how reorder recommendations change instantly.")
+    demand_mult_raw = st.slider("📈 Demand Surge", 0.8, 2.0, 1.0, 0.05,
+                                help="Simulate tourist season, viral bait moment, or general surge")
+    delay_days_raw = st.slider("🚚 Supplier Delay (extra days)", 0, 7, 0,
+                               help="Add extra days to all supplier lead times")
+    bad_weather_raw = st.checkbox("🌧️ Bad Weather (−20%)", value=False,
+                                  help="Cold front or storm — suppresses demand across seasonal SKUs")
+    service_pct_raw = st.selectbox("🎯 Service Level", [0.85, 0.90, 0.95, 0.99],
+                                   index=2, format_func=lambda x: f"{int(x*100)}%")
+    demand_mult_final = demand_mult_raw * (0.80 if bad_weather_raw else 1.0)
+    st.session_state["demand_mult"] = demand_mult_final
+    st.session_state["delay_days"] = delay_days_raw
+    st.session_state["service_pct_sidebar"] = service_pct_raw
+    st.markdown("---")
+    st.markdown("**🎣 Demo Mode**")
+    st.caption("All features work without API keys. AI Brief tab requires GROQ_API_KEY (free at console.groq.com).")
+
 # ── Data loading (cached) ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def load_conditions():
@@ -294,12 +314,16 @@ with tab3:
         "viral_bait_moment":  "🔥 Viral Bait Moment",
         "cold_front":         "🧊 Cold Front Incoming",
         "striper_run_peak":   "🐟 Striper Run Peak",
+        "tourist_season":     "🏖️ Tourist Season",
+        "supplier_delay":     "🚚 Supplier Delay",
     }
     SCENARIO_DESCRIPTIONS = {
         "tournament_weekend": "Local bass tournament drives finesse tackle and soft plastic demand up sharply.",
         "viral_bait_moment":  "A bait is going viral on Reddit/YouTube — soft plastic demand 3× baseline.",
         "cold_front":         "Cold front suppresses activity — live bait and soft plastics drop 30–40%.",
         "striper_run_peak":   "Striper migration peak — paddle tails and bucktails in high demand.",
+        "tourist_season":     "Summer tourists flood in — accessories and hard baits spike 40–60%.",
+        "supplier_delay":     "Key supplier running 3+ days late — models urgency under extended lead times.",
     }
 
     active_scenario = st.radio("Select a scenario", list(SCENARIO_LABELS.keys()),
@@ -333,112 +357,166 @@ with tab3:
     else:
         st.session_state.pop("active_scenario", None)
 with tab4:
-    st.markdown("### 📦 Inventory Status & Reorder Recommendations")
-
-    service_pct = st.selectbox("Target Service Level", [0.85, 0.90, 0.95, 0.99],
-                                index=2, format_func=lambda x: f"{int(x*100)}%")
+    st.markdown("### 📦 Inventory & Reorder Command Center")
 
     from inventory.model import safety_stock, reorder_point, economic_order_quantity, days_of_supply, SERVICE_LEVEL_Z
     from inventory.data import load_inventory, get_avg_daily_demand, get_std_daily_demand, get_lead_time
+    from inventory.recommendations import (
+        urgency_score, confidence_label, reason_card, why_not_reorder,
+        fallback_buyer_brief, gross_margin, revenue_at_risk, SKU_SPECIES_MAP,
+    )
     from charts.inventory_gauges import build_gauge
     from charts.days_of_supply import build_dos_chart
+
+    demand_mult = st.session_state.get("demand_mult", 1.0)
+    delay_days  = st.session_state.get("delay_days", 0)
+    service_pct = st.session_state.get("service_pct_sidebar", 0.95)
 
     z = SERVICE_LEVEL_Z[service_pct]
     inventory = load_inventory()
     cond4 = load_conditions()
     month_now = datetime.date.today().month
+    month_name = datetime.date.today().strftime("%B")
     species_now = config.SPECIES_CALENDAR.get(month_now, {})
     striper_active = species_now.get("Striped Bass", "Inactive") in ("Peak", "Good")
     fishing_score_now = cond4["fishing_score"]
 
-    SKU_SEASONAL_RELEVANCE = {
-        "soft_plastics": True, "bucktails_jigs": True,
-        "live_bait": True, "hard_baits": True,
-        "terminal_tackle": False, "accessories": False,
-    }
+    # ── Seasonal Intelligence ─────────────────────────────────────────────────
+    st.markdown("#### 🗓️ Local Demand Context")
+    active_species = {sp: lvl for sp, lvl in species_now.items() if lvl in ("Peak", "Good")}
+    if active_species:
+        sp_str = "  ·  ".join(f"**{sp}** {lvl}" for sp, lvl in active_species.items())
+        st.info(f"📍 {month_name} near {config.SHOP_REGION}: {sp_str} season. Seasonal SKUs receive a demand lift in the Command Center below.")
+    else:
+        st.info(f"📍 {month_name} near {config.SHOP_REGION}: Low species activity. Demand signals are muted across seasonal SKUs.")
 
-    dos_data = []
-    reorder_rows = []
-    explainability = {}
+    sp_cols = st.columns(len(config.SKU_CATEGORIES))
+    for i, (sku_key, label) in enumerate(config.SKU_CATEGORIES.items()):
+        species = SKU_SPECIES_MAP.get(sku_key, [])
+        with sp_cols[i]:
+            active_for_sku = [sp for sp in species if species_now.get(sp) in ("Peak", "Good")]
+            badge = "🟢" if active_for_sku else "⚪"
+            st.markdown(f"{badge} **{label}**")
+            for sp in (species or ["All-season"]):
+                lvl = species_now.get(sp, "")
+                st.caption(f"{sp}{': ' + lvl if lvl else ''}")
+
+    st.markdown("---")
+
+    # ── Build all recommendations ─────────────────────────────────────────────
+    all_recs = []
+    dos_data  = []
 
     for sku_key, label in config.SKU_CATEGORIES.items():
         sku = inventory[sku_key]
-        daily_demand = get_avg_daily_demand(sku)
-        std_demand = get_std_daily_demand(sku)
-        lead_time = get_lead_time(sku, config.DEFAULT_LEAD_TIME_DAYS)
-        ss = safety_stock(std_demand, lead_time, z)
-        rop = reorder_point(daily_demand, lead_time, ss)
-        eoq = economic_order_quantity(
-            sku["avg_weekly_demand"] * 52,
-            sku["order_cost"],
-            sku["holding_cost"],
-        )
-        dos = days_of_supply(sku["on_hand"], daily_demand)
+        daily  = get_avg_daily_demand(sku) * demand_mult
+        std    = get_std_daily_demand(sku)
+        lt     = get_lead_time(sku, config.DEFAULT_LEAD_TIME_DAYS) + delay_days
+        ss     = safety_stock(std, lt, z)
+        rop    = reorder_point(daily, lt, ss)
+        eoq    = economic_order_quantity(sku["avg_weekly_demand"] * 52 * demand_mult,
+                                         sku["order_cost"], sku["holding_cost"])
+        dos    = days_of_supply(sku["on_hand"], daily)
+        margin = gross_margin(sku.get("unit_cost", 0), sku.get("retail_price", 1))
+        rev_risk = revenue_at_risk(sku["on_hand"], rop, sku.get("retail_price", 0))
+        score  = urgency_score(sku["on_hand"], rop, dos, lt, fishing_score_now,
+                               striper_active, sku_key, margin)
+        conf   = confidence_label(sku["on_hand"], rop, dos, lt, fishing_score_now,
+                                  striper_active, sku_key)
+        reasons = reason_card(sku_key, sku["on_hand"], rop, dos, lt, fishing_score_now,
+                              striper_active, margin, species_now)
 
-        # Status
-        if dos < lead_time or sku["on_hand"] < rop * 0.5:
+        if dos < lt or sku["on_hand"] < rop * 0.5:
             status = "🔴 Critical"
-        elif sku["on_hand"] < rop or dos < lead_time * 1.5:
+        elif sku["on_hand"] < rop or dos < lt * 1.5:
             status = "🟠 Reorder Soon"
-        elif dos < lead_time * 2 or sku["on_hand"] < rop * 1.2:
+        elif dos < lt * 2 or sku["on_hand"] < rop * 1.2:
             status = "🟡 Watch"
         else:
             status = "🟢 Healthy"
 
-        # Explainability reasons
-        reasons = []
-        if sku["on_hand"] < rop:
-            reasons.append("Below reorder point")
-        if dos < 14:
-            reasons.append(f"Low days of supply ({dos:.0f}d)")
-        if striper_active and SKU_SEASONAL_RELEVANCE.get(sku_key):
-            reasons.append(f"Striper season active ({species_now.get('Striped Bass')})")
-        if fishing_score_now >= 70:
-            reasons.append(f"Strong fishing signal ({fishing_score_now}/100)")
-        if lead_time >= 6:
-            reasons.append(f"Long supplier lead time ({lead_time}d)")
-        if std_demand > daily_demand * 0.35:
-            reasons.append("High demand volatility")
-        explainability[sku_key] = reasons
+        order_qty = (max(eoq, (rop - sku["on_hand"]) + eoq)
+                     if sku["on_hand"] < rop else eoq * 0.5)
 
         dos_data.append({"label": label, "dos": min(dos, 60), "urgency": status})
-        reorder_rows.append({
-            "SKU": label,
-            "Supplier": sku.get("supplier", "—"),
-            "On Hand": f"{sku['on_hand']} {sku['unit']}",
-            "DoS": f"{dos:.0f}d" if dos < 100 else "60d+",
-            "ROP": f"{rop:.0f}",
-            "EOQ": f"{eoq:.0f}",
-            "Status": status,
+        all_recs.append({
+            "sku_key": sku_key, "label": label, "status": status, "urgency": score,
+            "confidence": conf, "reasons": reasons, "on_hand": sku["on_hand"],
+            "unit": sku["unit"], "dos": dos, "lead_time": lt, "rop": rop,
+            "eoq": eoq, "order_qty": order_qty, "margin": margin,
+            "rev_risk": rev_risk, "supplier": sku.get("supplier", "—"),
         })
 
-    # Gauges row
-    st.markdown("**Stock Levels**")
+    all_recs.sort(key=lambda r: r["urgency"], reverse=True)
+    flagged = [r for r in all_recs if r["urgency"] >= 30]
+    healthy  = [r for r in all_recs if r["urgency"] < 20]
+
+    # ── Reorder Command Center ────────────────────────────────────────────────
+    st.markdown("#### 🎯 Reorder Command Center")
+    CONF_COLOR = {"High": "#22c55e", "Medium": "#fbbf24", "Low": "#94a3b8"}
+
+    if not flagged:
+        st.success("All SKUs are healthy under current conditions. No reorder actions needed.")
+    else:
+        for rec in flagged:
+            cc = CONF_COLOR[rec["confidence"]]
+            st.markdown(f"""
+<div class="metric-card" style="border-left:4px solid {cc};margin-bottom:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-size:16px;font-weight:700">{rec['label']}</span>
+    <span style="display:flex;gap:8px;align-items:center">
+      <span style="background:#1e3a5f;color:#93c5fd;padding:2px 10px;border-radius:12px;font-size:12px">{rec['status']}</span>
+      <span style="background:#1e293b;color:#94a3b8;padding:2px 10px;border-radius:12px;font-size:12px">Urgency {rec['urgency']}/100</span>
+      <span style="color:{cc};font-size:12px;font-weight:600">{rec['confidence']} confidence</span>
+    </span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px">
+    <div><div style="font-size:11px;color:#64748b">On Hand</div><div style="font-weight:600">{rec['on_hand']} {rec['unit']}</div></div>
+    <div><div style="font-size:11px;color:#64748b">Days of Supply</div><div style="font-weight:600">{rec['dos']:.0f}d</div></div>
+    <div><div style="font-size:11px;color:#64748b">Gross Margin</div><div style="font-weight:600">{rec['margin']:.0%}</div></div>
+    <div><div style="font-size:11px;color:#64748b">Rev. at Risk</div><div style="font-weight:600;color:#f97316">${rec['rev_risk']:.0f}</div></div>
+    <div><div style="font-size:11px;color:#64748b">Suggested Order</div><div style="font-weight:600;color:#38bdf8">{rec['order_qty']:.0f} {rec['unit']}</div></div>
+  </div>
+  <div style="font-size:12px;color:#94a3b8;border-top:1px solid #334155;padding-top:8px;line-height:1.6">
+    <span style="color:#64748b">Business:</span> {rec['reasons']['business']}<br>
+    <span style="color:#64748b">Calculation:</span> {rec['reasons']['calc']}<br>
+    <span style="color:#64748b">Demand signal:</span> {rec['reasons']['demand']}
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ── Buyer's Brief ─────────────────────────────────────────────────────────
+    st.markdown("#### 🤖 Buyer's Brief")
+    brief = fallback_buyer_brief(all_recs, species_now, fishing_score_now)
+    st.markdown(
+        f'<div class="metric-card" style="border-left:4px solid #38bdf8;font-size:14px;line-height:1.7">{brief}</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    # ── Stock Level Gauges + DoS chart ────────────────────────────────────────
+    st.markdown("#### 📊 Stock Levels")
     gauge_cols = st.columns(3)
     for i, (sku_key, label) in enumerate(list(config.SKU_CATEGORIES.items())[:6]):
         sku = inventory[sku_key]
         with gauge_cols[i % 3]:
-            max_val = sku["on_hand"] * 1.5
-            st.plotly_chart(build_gauge(label, sku["on_hand"], max_val, sku["unit"]),
+            st.plotly_chart(build_gauge(label, sku["on_hand"], sku["on_hand"] * 1.5, sku["unit"]),
                             use_container_width=True)
-
-    # Days of supply chart
     st.plotly_chart(build_dos_chart(dos_data), use_container_width=True)
 
-    # Reorder table
-    st.markdown("**Reorder Recommendations**")
-    import pandas as pd
-    df_reorder = pd.DataFrame(reorder_rows)
-    st.dataframe(df_reorder, use_container_width=True, hide_index=True)
-
-    # Explainability bullets
-    st.markdown("**Why These SKUs Are Flagged**")
-    for sku_key, label in config.SKU_CATEGORIES.items():
-        reasons = explainability.get(sku_key, [])
-        if reasons:
-            with st.expander(f"{label} — {len(reasons)} signal{'s' if len(reasons) > 1 else ''}"):
-                for r in reasons:
-                    st.markdown(f"- {r}")
+    # ── Why Not? ──────────────────────────────────────────────────────────────
+    if healthy:
+        st.markdown("#### ✅ Why Not Reorder?")
+        for rec in healthy:
+            why = why_not_reorder(rec["label"], rec["dos"], rec["lead_time"],
+                                  rec["rop"], rec["on_hand"])
+            st.markdown(
+                f'<div style="padding:8px 14px;background:#0a2010;border-radius:8px;'
+                f'font-size:13px;color:#86efac;margin-bottom:6px">✓ {why}</div>',
+                unsafe_allow_html=True,
+            )
 with tab5:
     st.markdown("### 🤖 AI Planning Brief")
     st.caption("Claude synthesizes all signals into a Monday morning buyer's memo.")

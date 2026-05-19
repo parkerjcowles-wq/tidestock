@@ -54,7 +54,15 @@ Write the planning brief now:"""
 
 
 def generate_brief_streaming(prompt: str):
-    client = groq.Groq(api_key=os.environ["GROQ_API_KEY"])
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        yield (
+            "**Demo Mode — AI brief unavailable** (no `GROQ_API_KEY` configured).\n\n"
+            "Add your free Groq API key to Streamlit secrets to enable the AI-generated S&OP memo. "
+            "The **Buyer's Brief** in the Inventory tab provides a deterministic summary that works without any API key."
+        )
+        return
+    client = groq.Groq(api_key=api_key)
     stream = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         max_tokens=512,

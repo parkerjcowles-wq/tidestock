@@ -20,6 +20,8 @@ SCENARIO_EFFECTS = {
     "viral_bait_moment":  {"soft_plastics": 3.0, "hard_baits": 1.5},
     "cold_front":         {"live_bait": 0.6, "soft_plastics": 0.7, "hard_baits": 0.8},
     "striper_run_peak":   {"soft_plastics": 2.0, "bucktails_jigs": 2.2, "accessories": 1.3},
+    "tourist_season":     {"accessories": 1.6, "hard_baits": 1.4, "terminal_tackle": 1.3, "soft_plastics": 1.2},
+    "supplier_delay":     {},
 }
 
 

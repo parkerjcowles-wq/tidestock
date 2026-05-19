@@ -121,6 +121,16 @@ See [`docs/ai-development-log.md`](docs/ai-development-log.md) for a full breakd
 
 ---
 
+## What This Demonstrates
+
+- **AI-assisted product development** — Claude and Groq used as collaborators, not black boxes; all recommendations are computed deterministically first, then explained by AI
+- **Inventory modeling** — safety stock, reorder point, EOQ, and days of supply applied to a real business domain with per-SKU lead times and demand variability
+- **Explainable decision support** — every reorder recommendation includes a business reason, calculation reason, and demand signal reason; confidence scores make uncertainty visible
+- **Streamlit dashboard development** — multi-tab layout, sidebar what-if controls, Plotly interactive charts, custom CSS card components, real-time recalculation on slider changes
+- **Testable Python business logic** — all supply chain math and signal weighting lives outside `app.py` in importable modules with a full pytest suite
+- **Practical use of forecasting signals** — NOAA tides, moon phase, barometric pressure, Reddit social velocity, and Google Trends combined into a single weighted demand index
+- **Human-in-the-loop AI design** — AI explains what the math already decided; domain knowledge (4 years in a bait shop) informed every multiplier value and SKU assumption
+
 ## Future Improvements
 
 - Connect live POS data to replace seed inventory
