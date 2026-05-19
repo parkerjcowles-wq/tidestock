@@ -1,5 +1,6 @@
 {
   "_version": 2,
+  "_note": "Category-level demo inventory. Each entry represents a product category, not an individual SKU. Values seeded from 4 years of bait shop experience at Crossroads Bait & Tackle.",
   "soft_plastics": {
     "name": "Soft Plastics (paddle tails, worms, grubs)",
     "category": "Soft Baits",

@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -99,8 +100,15 @@ with st.sidebar:
     st.session_state["delay_days"] = delay_days_raw
     st.session_state["service_pct_sidebar"] = service_pct_raw
     st.markdown("---")
-    st.markdown("**🎣 Demo Mode**")
-    st.caption("All features work without API keys. AI Brief tab requires GROQ_API_KEY (free at console.groq.com).")
+    st.markdown("**🎣 Portfolio / Demo Mode**")
+    st.markdown("""
+<div style="font-size:12px;color:#64748b;line-height:1.6">
+• Seed inventory data powers all recommendations offline<br>
+• Environmental data (NOAA, weather, moon) fetches live — graceful fallback if unavailable<br>
+• Social Intel requires Reddit API keys (optional)<br>
+• AI Brief requires <code>GROQ_API_KEY</code> — free at <a href="https://console.groq.com" style="color:#38bdf8">console.groq.com</a>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Data loading (cached) ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
@@ -182,7 +190,7 @@ with tab2:
     st.caption("What's buzzing in fishing communities right now — before it hits your counter.")
 
     from signals.reddit_signals import fetch_reddit_signals, get_overall_social_velocity
-    from signals.trends import fetch_trends_data, get_trending_keywords
+    from signals.trends import fetch_trends_data, get_trending_keywords_from_df
     from signals.tournament import fetch_tournaments
     from charts.reddit_feed import build_reddit_feed_html
     from charts.trends_chart import build_trends_chart
@@ -194,13 +202,10 @@ with tab2:
         except Exception:
             posts = []
         try:
-            trend_kws = get_trending_keywords(config.FISHING_KEYWORDS)
-        except Exception:
-            trend_kws = []
-        try:
             trend_df = fetch_trends_data(config.FISHING_KEYWORDS)
         except Exception:
             trend_df = None
+        trend_kws = get_trending_keywords_from_df(trend_df, config.FISHING_KEYWORDS)
         try:
             tournaments = fetch_tournaments(config.SHOP_REGION)
         except Exception:
@@ -215,6 +220,9 @@ with tab2:
 
     # Trend Alert chips
     alerts = [k for k in trend_kws if k["velocity"] in ("trending", "elevated")]
+    st.session_state["trend_alerts"] = [
+        f'{a["keyword"]} +{a["pct_change"]}% ({a["velocity"]})' for a in alerts
+    ]
     if alerts:
         st.markdown("**🚨 Trend Alerts**")
         chips = " ".join(
@@ -346,7 +354,6 @@ with tab3:
             use_container_width=True,
         )
         # Delta table
-        import pandas as pd
         delta_rows = [
             {
                 "Category": config.SKU_CATEGORIES[k],
@@ -528,7 +535,7 @@ with tab4:
             )
 with tab5:
     st.markdown("### 🤖 AI Planning Brief")
-    st.caption("Claude synthesizes all signals into a Monday morning buyer's memo.")
+    st.caption("AI synthesizes all signals into a Monday morning buyer's memo.")
 
     from ai.brief import build_brief_prompt, generate_brief_streaming
     from inventory.model import days_of_supply, safety_stock, reorder_point, SERVICE_LEVEL_Z
@@ -539,7 +546,7 @@ with tab5:
     month_now = datetime.date.today().month
     species_activity = config.SPECIES_CALENDAR.get(month_now, {})
 
-    service_pct = st.session_state.get("service_pct", config.DEFAULT_SERVICE_LEVEL)
+    service_pct = st.session_state.get("service_pct_sidebar", config.DEFAULT_SERVICE_LEVEL)
     z = SERVICE_LEVEL_Z[service_pct]
     inv_summary = {}
     for sku_key, label in config.SKU_CATEGORIES.items():

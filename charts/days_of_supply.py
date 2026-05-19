@@ -1,6 +1,11 @@
 import plotly.graph_objects as go
 
-_URGENCY_COLOR = {"Order Today": "#ef4444", "This Week": "#f97316", "Monitor": "#22c55e"}
+_URGENCY_COLOR = {
+    "🔴 Critical": "#ef4444",
+    "🟠 Reorder Soon": "#f97316",
+    "🟡 Watch": "#fbbf24",
+    "🟢 Healthy": "#22c55e",
+}
 
 
 def build_dos_chart(dos_data: list) -> go.Figure:
@@ -14,7 +19,7 @@ def build_dos_chart(dos_data: list) -> go.Figure:
         hovertemplate="%{y}: %{x:.0f} days<extra></extra>",
     ))
     fig.add_vline(x=7, line=dict(color="#ef4444", dash="dash", width=1),
-                  annotation_text="Reorder Point", annotation_font_color="#ef4444")
+                  annotation_text="1 Week Supply", annotation_font_color="#ef4444")
     fig.update_layout(
         template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
         margin=dict(l=10, r=10, t=30, b=10), height=280,
