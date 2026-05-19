@@ -10,6 +10,7 @@ from signals.moon import get_week_moon_data, get_moon_phase, get_fishing_score
 from charts.tides import build_tide_chart
 from charts.pressure import build_pressure_chart
 from charts.moon_calendar import build_moon_strip_html
+from assets.sku_styles import source_badge_html, dos_progress_bar_html, SKU_STYLES
 import datetime
 
 st.set_page_config(page_title="TideStock", page_icon="🎣", layout="wide")
@@ -17,70 +18,136 @@ st.set_page_config(page_title="TideStock", page_icon="🎣", layout="wide")
 # ── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Global */
+/* ── Base ── */
 [data-testid="stAppViewContainer"] { background: #0f172a; }
-[data-testid="stSidebar"] { background: #0f172a; }
-[data-testid="stHeader"] { background: transparent; }
-[data-testid="stTabsContent"] { padding-top: 16px; }
+[data-testid="stSidebar"]          { background: #0c1322; }
+[data-testid="stHeader"]           { background: transparent; }
+[data-testid="stTabsContent"]      { padding-top: 16px; }
 
-/* Tab bar */
+/* ── Tab bar ── */
 button[data-baseweb="tab"] {
     font-size: 13px !important;
     padding: 8px 16px !important;
+    color: #64748b !important;
 }
 button[data-baseweb="tab"][aria-selected="true"] {
     border-bottom: 2px solid #38bdf8 !important;
-    color: #38bdf8 !important;
+    color: #f1f5f9 !important;
 }
 
-/* Cards */
+/* ── Cards ── */
 .metric-card {
     background: #1e293b;
     border-radius: 10px;
     padding: 14px 18px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #334155;
+    transition: border-color 0.15s ease;
+}
+.metric-card:hover { border-color: #475569; }
+
+/* ── Reorder risk card ── */
+.risk-card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
     border: 1px solid #334155;
 }
+.risk-card-critical   { border-left: 4px solid #ef4444 !important; }
+.risk-card-reorder    { border-left: 4px solid #f97316 !important; }
+.risk-card-watch      { border-left: 4px solid #fbbf24 !important; }
 
-/* Signal chips */
+/* ── Signal chips ── */
 .signal-chip {
     display: inline-block;
     padding: 3px 10px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    margin: 3px;
+    margin: 2px 3px;
+    letter-spacing: 0.01em;
 }
 
-/* Species activity */
+/* ── Source badges ── */
+.source-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+/* ── Species activity ── */
 .activity-peak     { background: #166534; color: #bbf7d0; }
 .activity-good     { background: #14532d; color: #86efac; }
 .activity-fair     { background: #713f12; color: #fde68a; }
 .activity-low      { background: #7c2d12; color: #fdba74; }
 .activity-inactive { background: #1f2937; color: #9ca3af; }
 
-/* Plotly charts — remove white bg */
+/* ── Status badges ── */
+.badge-critical  { background:#450a0a; color:#fca5a5; }
+.badge-reorder   { background:#431407; color:#fdba74; }
+.badge-watch     { background:#422006; color:#fde68a; }
+.badge-healthy   { background:#052e16; color:#86efac; }
+.badge-neutral   { background:#1e293b; color:#94a3b8; }
+
+/* ── Section dividers ── */
+.section-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e293b;
+}
+
+/* ── What-if active state ── */
+.whatif-active {
+    background: #0c2545;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #93c5fd;
+    margin-bottom: 8px;
+}
+
+/* ── Plotly ── */
 .js-plotly-plot .plotly .modebar { background: transparent !important; }
 
-/* Streamlit metric */
-[data-testid="stMetricValue"] { font-size: 1.6rem !important; color: #38bdf8; }
+/* ── Streamlit metrics ── */
+[data-testid="stMetricValue"] { font-size: 1.5rem !important; color: #38bdf8; }
 [data-testid="stMetricLabel"] { color: #64748b !important; font-size: 12px !important; }
+[data-testid="stMetricDelta"] { font-size: 11px !important; }
 
-/* Buttons */
+/* ── Buttons ── */
 [data-testid="baseButton-primary"] {
     background: linear-gradient(135deg, #0369a1, #0c4a6e) !important;
     border: none !important;
     border-radius: 8px !important;
 }
+[data-testid="baseButton-secondary"] {
+    background: #1e293b !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+}
+
+/* ── Sidebar ── */
+[data-testid="stSidebar"] [data-testid="stMarkdown"] { color: #94a3b8; }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div style="padding:16px 0 8px">
-    <span style="font-size:28px;font-weight:700;color:#f1f5f9">🎣 TideStock</span>
-    <span style="font-size:14px;color:#64748b;margin-left:12px">Bait Shop Demand Intelligence</span>
+<div style="padding:16px 0 6px;display:flex;align-items:baseline;gap:12px">
+    <span style="font-size:26px;font-weight:700;color:#f1f5f9;letter-spacing:-0.02em">🎣 TideStock</span>
+    <span style="font-size:13px;color:#475569">Bait Shop Demand Intelligence · Newburyport, MA</span>
 </div>
-<div style="height:1px;background:#1e293b;margin-bottom:16px"></div>
+<div style="height:1px;background:#1e293b;margin-bottom:14px"></div>
 """, unsafe_allow_html=True)
 
 # ── Sidebar: What-If Controls ────────────────────────────────────────────────
@@ -99,6 +166,21 @@ with st.sidebar:
     st.session_state["demand_mult"] = demand_mult_final
     st.session_state["delay_days"] = delay_days_raw
     st.session_state["service_pct_sidebar"] = service_pct_raw
+
+    # Active what-if indicator
+    overrides = []
+    if abs(demand_mult_raw - 1.0) > 0.05:
+        overrides.append(f"Demand {demand_mult_raw:.2f}×")
+    if delay_days_raw > 0:
+        overrides.append(f"+{delay_days_raw}d lead time")
+    if bad_weather_raw:
+        overrides.append("Bad weather −20%")
+    if overrides:
+        st.markdown(
+            f'<div class="whatif-active">⚡ Active: {" · ".join(overrides)}</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown("---")
     st.markdown("**🎣 Portfolio / Demo Mode**")
     st.markdown("""
@@ -137,6 +219,7 @@ def load_conditions():
         "today_phase": today_phase,
         "tide_quality": tide_quality,
         "fishing_score": fishing_score,
+        "loaded_at": datetime.datetime.now().strftime("%I:%M %p"),
     }
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -146,49 +229,59 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 # ── Tab 1: Conditions ──────────────────────────────────────────────────────────
 with tab1:
-    st.markdown("### 🌊 Fishing Conditions This Week")
-    st.caption(f"📍 {config.SHOP_REGION}")
-
     cond = load_conditions()
+
+    # Source badges + refresh
+    rcol1, rcol2 = st.columns([6, 1])
+    with rcol1:
+        st.markdown(
+            f'<div class="source-row">'
+            f'{source_badge_html("noaa", "Tides")} '
+            f'{source_badge_html("ndbc", "Water temp")} '
+            f'{source_badge_html("meteo", "Pressure")} '
+            f'<span style="font-size:10px;color:#334155">· refreshes hourly · last loaded {cond["loaded_at"]}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with rcol2:
+        if st.button("⟳ Refresh", key="refresh_cond", help="Reload environmental data"):
+            load_conditions.clear()
+            st.rerun()
 
     # Top KPI row
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("🎣 Fishing Score", f"{cond['fishing_score']}/100")
-    col2.metric("🌡️ Water Temp", f"{cond['water_temp']:.1f}°F")
-    col3.metric("🌙 Moon Phase", cond["today_phase"].replace("_", " ").title())
-    col4.metric("🌀 Pressure", cond["weather"]["pressure_trend"].capitalize())
+    score = cond["fishing_score"]
+    score_delta = "Prime" if score >= 80 else "Good" if score >= 60 else "Fair" if score >= 40 else "Poor"
+    col1.metric("Fishing Score", f"{score}/100", score_delta)
+    col2.metric("Water Temp", f"{cond['water_temp']:.1f}°F")
+    col3.metric("Moon Phase", cond["today_phase"].replace("_", " ").title())
+    col4.metric("Pressure", cond["weather"]["pressure_trend"].capitalize())
 
-    # Moon strip
-    st.markdown("**7-Day Moon Forecast**")
+    st.markdown('<div class="section-header">7-Day Moon Forecast</div>', unsafe_allow_html=True)
     st.markdown(build_moon_strip_html(cond["week_moon"]), unsafe_allow_html=True)
 
-    # Tide chart
-    st.markdown("**Tide Predictions**")
+    st.markdown('<div class="section-header">Tide Predictions</div>', unsafe_allow_html=True)
     st.plotly_chart(build_tide_chart(cond["tide_df"]), use_container_width=True)
 
-    # Pressure chart
-    st.markdown("**Barometric Pressure (48h)**")
+    st.markdown('<div class="section-header">Barometric Pressure (48h)</div>', unsafe_allow_html=True)
     pressure_df = cond["weather"]["pressure_series"]
     st.plotly_chart(build_pressure_chart(pressure_df, cond["weather"]["pressure_trend"]), use_container_width=True)
 
-    # Species activity
-    st.markdown("**Species Activity**")
+    st.markdown('<div class="section-header">Species Activity — ' + datetime.date.today().strftime("%B") + '</div>', unsafe_allow_html=True)
     month = datetime.date.today().month
     species = config.SPECIES_CALENDAR.get(month, {})
     cols = st.columns(len(species))
     for col, (sp, level) in zip(cols, species.items()):
         css_class = f"activity-{level.lower()}"
         col.markdown(
-            f'<div class="metric-card"><div style="font-size:13px;color:#94a3b8">{sp}</div>'
+            f'<div class="metric-card" style="text-align:center">'
+            f'<div style="font-size:12px;color:#64748b;margin-bottom:6px">{sp}</div>'
             f'<span class="signal-chip {css_class}">{level}</span></div>',
             unsafe_allow_html=True,
         )
 
 # Remaining tabs — stubs (built in later tasks)
 with tab2:
-    st.markdown("### 📡 Social Intelligence")
-    st.caption("What's buzzing in fishing communities right now — before it hits your counter.")
-
     from signals.reddit_signals import fetch_reddit_signals, get_overall_social_velocity
     from signals.trends import fetch_trends_data, get_trending_keywords_from_df
     from signals.tournament import fetch_tournaments
@@ -211,24 +304,41 @@ with tab2:
         except Exception:
             tournaments = []
         velocity = get_overall_social_velocity(posts)
-        return posts, trend_kws, trend_df, tournaments, velocity
+        return posts, trend_kws, trend_df, tournaments, velocity, datetime.datetime.now().strftime("%I:%M %p")
 
-    posts, trend_kws, trend_df, tournaments, velocity = load_social()
-
-    # Update session state so Scenario Sim can use live velocity
+    posts, trend_kws, trend_df, tournaments, velocity, social_loaded_at = load_social()
     st.session_state["social_velocity"] = velocity
 
-    # Trend Alert chips
+    # Source badges + refresh
+    s1, s2 = st.columns([6, 1])
+    with s1:
+        velocity_color = {"trending": "#fca5a5", "elevated": "#fde68a", "baseline": "#94a3b8"}[velocity]
+        st.markdown(
+            f'<div class="source-row">'
+            f'{source_badge_html("reddit", "Public API")} '
+            f'{source_badge_html("trends", "pytrends")} '
+            f'{source_badge_html("exa", "Tournaments")} '
+            f'<span style="font-size:10px;color:#334155">· last loaded {social_loaded_at}</span> '
+            f'<span class="signal-chip" style="background:#1e293b;color:{velocity_color}">Signal: {velocity}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    with s2:
+        if st.button("⟳ Refresh", key="refresh_social", help="Reload social signals"):
+            load_social.clear()
+            st.rerun()
+
+    # Trend alert chips
     alerts = [k for k in trend_kws if k["velocity"] in ("trending", "elevated")]
     st.session_state["trend_alerts"] = [
         f'{a["keyword"]} +{a["pct_change"]}% ({a["velocity"]})' for a in alerts
     ]
     if alerts:
-        st.markdown("**🚨 Trend Alerts**")
+        st.markdown('<div class="section-header">Trend Alerts</div>', unsafe_allow_html=True)
         chips = " ".join(
-            f'<span class="signal-chip" style="background:#450a0a;color:#fca5a5">🔴 {a["keyword"].title()} +{a["pct_change"]}%</span>'
+            f'<span class="signal-chip badge-critical">▲ {a["keyword"].title()} +{a["pct_change"]}%</span>'
             if a["velocity"] == "trending" else
-            f'<span class="signal-chip" style="background:#422006;color:#fde68a">🟡 {a["keyword"].title()} +{a["pct_change"]}%</span>'
+            f'<span class="signal-chip badge-watch">↑ {a["keyword"].title()} +{a["pct_change"]}%</span>'
             for a in alerts
         )
         st.markdown(chips, unsafe_allow_html=True)
@@ -236,43 +346,52 @@ with tab2:
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
-        st.markdown(f"**Reddit Fishing Feed** — Overall velocity: `{velocity}`")
-        st.markdown(build_reddit_feed_html(posts), unsafe_allow_html=True)
+        st.markdown('<div class="section-header">Reddit Fishing Feed</div>', unsafe_allow_html=True)
+        if posts:
+            st.markdown(build_reddit_feed_html(posts), unsafe_allow_html=True)
+        else:
+            st.markdown(
+                '<div class="metric-card" style="color:#475569;text-align:center;padding:24px">'
+                'No Reddit posts loaded — public API may be temporarily throttled.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
 
     with col_right:
-        st.markdown("**Google Trends (90-day)**")
-        if trend_df is not None and not trend_df.empty:
-            st.plotly_chart(build_trends_chart(trend_df, config.FISHING_KEYWORDS),
-                            use_container_width=True)
-        else:
-            st.warning("Google Trends data unavailable (rate limited). Try again in a few minutes.")
+        st.markdown('<div class="section-header">Google Trends · 90-Day Velocity</div>', unsafe_allow_html=True)
+        st.plotly_chart(build_trends_chart(trend_df, config.FISHING_KEYWORDS), use_container_width=True)
 
-        # Tournament calendar
-        st.markdown("**Upcoming Tournaments**")
+        st.markdown('<div class="section-header">Tournament Calendar</div>', unsafe_allow_html=True)
         if tournaments:
             from html import escape
             for t in tournaments:
                 safe_title = escape(t["title"])[:70]
                 raw_url = t.get("url", "")
                 safe_url = escape(raw_url) if raw_url.startswith(("https://", "http://")) else "#"
+                days = t.get("days_until", "")
+                days_badge = f'<span class="signal-chip badge-watch">{days}d away</span>' if days else ""
                 st.markdown(
-                    f'<div class="metric-card"><div style="color:#fbbf24;font-size:13px">🏆 {safe_title}</div>'
-                    f'<a href="{safe_url}" style="color:#64748b;font-size:11px">Source ↗</a></div>',
+                    f'<div class="metric-card" style="padding:10px 14px">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center">'
+                    f'<span style="color:#fbbf24;font-size:13px">🏆 {safe_title}</span>'
+                    f'{days_badge}</div>'
+                    f'<a href="{safe_url}" style="color:#475569;font-size:11px">Source ↗</a></div>',
                     unsafe_allow_html=True,
                 )
         else:
-            st.caption("No upcoming tournaments found for your region.")
+            st.markdown(
+                '<div class="metric-card" style="color:#475569;font-size:13px">'
+                'No upcoming tournaments found for this region.</div>',
+                unsafe_allow_html=True,
+            )
 with tab3:
-    st.markdown("### 🎛️ Scenario Simulator")
-    st.caption("Adjust signal weights to see how demand forecasts change in real time.")
 
     from inventory.forecast import compute_demand_index, compute_scenario_demand
     from inventory.data import load_inventory
     from charts.scenario import build_scenario_comparison
 
-    # ── Mode A: Signal Weighting ─────────────────────────────────────────
-    st.markdown("#### Mode A — Signal Weight Sliders")
-    st.caption("Drag sliders to control how much each signal influences this week's demand forecast.")
+    st.markdown('<div class="section-header">Mode A — Signal Weight Sliders</div>', unsafe_allow_html=True)
+    st.caption("Drag sliders to control how much each signal influences the demand forecast. Updates in real time.")
 
     col_sliders, col_chart = st.columns([1, 2])
     with col_sliders:
@@ -314,21 +433,24 @@ with tab3:
     }
 
     with col_chart:
+        avg_multiplier = sum(weighted_demands.values()) / sum(base_demands.values())
+        direction = "above" if avg_multiplier > 1.1 else "below" if avg_multiplier < 0.9 else "near"
+        delta_color = "#22c55e" if avg_multiplier > 1.05 else "#ef4444" if avg_multiplier < 0.95 else "#fbbf24"
+        st.markdown(
+            f'<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">'
+            f'<span class="signal-chip" style="background:#1e293b;color:{delta_color};font-size:13px">'
+            f'Demand Index {avg_multiplier:.2f}× baseline — {direction} normal</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
         st.plotly_chart(
-            build_scenario_comparison(base_demands, weighted_demands, config.SKU_CATEGORIES),
+            build_scenario_comparison(base_demands, weighted_demands, config.SKU_CATEGORIES,
+                                      subtitle="Signal Weights"),
             use_container_width=True,
         )
 
-    # Demand narrative
-    avg_multiplier = sum(weighted_demands.values()) / sum(base_demands.values())
-    st.markdown(
-        f"**Demand Index:** `{avg_multiplier:.2f}×` baseline — "
-        f"{'above' if avg_multiplier > 1.1 else 'below' if avg_multiplier < 0.9 else 'near'} normal"
-    )
-
-    # ── Mode B: Scenario Toggles ──────────────────────────────────────────
     st.markdown("---")
-    st.markdown("#### Mode B — Preset Scenario Toggles")
+    st.markdown('<div class="section-header">Mode B — Preset Scenario Toggles</div>', unsafe_allow_html=True)
 
     SCENARIO_LABELS = {
         "tournament_weekend": "🏆 Tournament This Weekend",
@@ -351,10 +473,23 @@ with tab3:
                                format_func=lambda k: SCENARIO_LABELS[k], index=None)
 
     if active_scenario:
-        st.caption(SCENARIO_DESCRIPTIONS[active_scenario])
         scenario_demands = compute_scenario_demand(base_demands, active_scenario)
+        total_base = sum(base_demands.values())
+        total_scen = sum(scenario_demands.values())
+        overall_pct = (total_scen - total_base) / total_base * 100 if total_base else 0
+        pct_color = "#22c55e" if overall_pct > 0 else "#ef4444"
+        pct_sign  = "+" if overall_pct > 0 else ""
+        st.markdown(
+            f'<div class="whatif-active">'
+            f'<b>{SCENARIO_LABELS[active_scenario]}</b> · '
+            f'<span style="color:{pct_color}">{pct_sign}{overall_pct:.0f}% total demand shift</span>'
+            f' · {SCENARIO_DESCRIPTIONS[active_scenario]}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
         st.plotly_chart(
-            build_scenario_comparison(base_demands, scenario_demands, config.SKU_CATEGORIES),
+            build_scenario_comparison(base_demands, scenario_demands, config.SKU_CATEGORIES,
+                                      subtitle=SCENARIO_LABELS[active_scenario]),
             use_container_width=True,
         )
         # Delta table
@@ -377,7 +512,6 @@ with tab3:
     else:
         st.session_state.pop("active_scenario", None)
 with tab4:
-    st.markdown("### 📦 Inventory & Reorder Command Center")
 
     from inventory.model import safety_stock, reorder_point, economic_order_quantity, days_of_supply, SERVICE_LEVEL_Z
     from inventory.data import load_inventory, get_avg_daily_demand, get_std_daily_demand, get_lead_time
@@ -401,8 +535,18 @@ with tab4:
     striper_active = species_now.get("Striped Bass", "Inactive") in ("Peak", "Good")
     fishing_score_now = cond4["fishing_score"]
 
+    # Source badge
+    st.markdown(
+        f'<div class="source-row">{source_badge_html("seed")} '
+        f'<span style="font-size:10px;color:#334155">Category-level demo inventory · '
+        f'Service level {int(service_pct * 100)}% · '
+        f'{"Demand ×" + f"{demand_mult:.2f}" if abs(demand_mult - 1.0) > 0.05 else "Baseline demand"}'
+        f'</span></div>',
+        unsafe_allow_html=True,
+    )
+
     # ── Seasonal Intelligence ─────────────────────────────────────────────────
-    st.markdown("#### 🗓️ Local Demand Context")
+    st.markdown('<div class="section-header">Local Demand Context — ' + month_name + '</div>', unsafe_allow_html=True)
     active_species = {sp: lvl for sp, lvl in species_now.items() if lvl in ("Peak", "Good")}
     if active_species:
         sp_str = "  ·  ".join(f"**{sp}** {lvl}" for sp, lvl in active_species.items())
@@ -472,42 +616,82 @@ with tab4:
     healthy  = [r for r in all_recs if r["urgency"] < 20]
 
     # ── Reorder Command Center ────────────────────────────────────────────────
-    st.markdown("#### 🎯 Reorder Command Center")
+    st.markdown('<div class="section-header">Reorder Command Center</div>', unsafe_allow_html=True)
     CONF_COLOR = {"High": "#22c55e", "Medium": "#fbbf24", "Low": "#94a3b8"}
+    STATUS_BADGE = {
+        "🔴 Critical":    "badge-critical",
+        "🟠 Reorder Soon": "badge-reorder",
+        "🟡 Watch":        "badge-watch",
+        "🟢 Healthy":      "badge-healthy",
+    }
 
     if not flagged:
-        st.success("All SKUs are healthy under current conditions. No reorder actions needed.")
+        st.markdown(
+            '<div class="metric-card badge-healthy" style="text-align:center;padding:20px;color:#86efac">'
+            '✓ All SKUs are healthy under current conditions. No reorder actions needed.</div>',
+            unsafe_allow_html=True,
+        )
     else:
         for rec in flagged:
-            cc = CONF_COLOR[rec["confidence"]]
+            cc       = CONF_COLOR[rec["confidence"]]
+            style_k  = rec["sku_key"]
+            sku_style = SKU_STYLES.get(style_k, {})
+            icon     = sku_style.get("icon", "📦")
+            accent   = sku_style.get("accent", "#94a3b8")
+            grad     = sku_style.get("gradient", "linear-gradient(135deg,#1e293b,#334155)")
+            sbadge   = STATUS_BADGE.get(rec["status"], "badge-neutral")
+            dos_bar  = dos_progress_bar_html(rec["dos"], rec["lead_time"], rec["status"])
+            supplier_note = f'<span style="color:#475569;font-size:11px">Supplier: {rec["supplier"]}</span>' if rec["supplier"] != "—" else ""
             st.markdown(f"""
-<div class="metric-card" style="border-left:4px solid {cc};margin-bottom:12px">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-    <span style="font-size:16px;font-weight:700">{rec['label']}</span>
-    <span style="display:flex;gap:8px;align-items:center">
-      <span style="background:#1e3a5f;color:#93c5fd;padding:2px 10px;border-radius:12px;font-size:12px">{rec['status']}</span>
-      <span style="background:#1e293b;color:#94a3b8;padding:2px 10px;border-radius:12px;font-size:12px">Urgency {rec['urgency']}/100</span>
-      <span style="color:{cc};font-size:12px;font-weight:600">{rec['confidence']} confidence</span>
-    </span>
+<div class="risk-card" style="border-left:4px solid {accent}">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="background:{grad};border-radius:8px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">{icon}</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#f1f5f9">{rec['label']}</div>
+        {supplier_note}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <span class="signal-chip {sbadge}">{rec['status']}</span>
+      <span class="signal-chip badge-neutral">Urgency {rec['urgency']}/100</span>
+      <span style="color:{cc};font-size:11px;font-weight:600">{rec['confidence']} confidence</span>
+    </div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px">
-    <div><div style="font-size:11px;color:#64748b">On Hand</div><div style="font-weight:600">{rec['on_hand']} {rec['unit']}</div></div>
-    <div><div style="font-size:11px;color:#64748b">Days of Supply</div><div style="font-weight:600">{rec['dos']:.0f}d</div></div>
-    <div><div style="font-size:11px;color:#64748b">Gross Margin</div><div style="font-weight:600">{rec['margin']:.0%}</div></div>
-    <div><div style="font-size:11px;color:#64748b">Rev. at Risk</div><div style="font-weight:600;color:#f97316">${rec['rev_risk']:.0f}</div></div>
-    <div><div style="font-size:11px;color:#64748b">Suggested Order</div><div style="font-weight:600;color:#38bdf8">{rec['order_qty']:.0f} {rec['unit']}</div></div>
+  {dos_bar}
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0">
+    <div style="background:#0f172a;border-radius:6px;padding:8px">
+      <div style="font-size:10px;color:#475569;margin-bottom:2px">On Hand</div>
+      <div style="font-weight:700;font-size:13px">{rec['on_hand']} {rec['unit']}</div>
+    </div>
+    <div style="background:#0f172a;border-radius:6px;padding:8px">
+      <div style="font-size:10px;color:#475569;margin-bottom:2px">Reorder Point</div>
+      <div style="font-weight:700;font-size:13px">{rec['rop']:.0f} {rec['unit']}</div>
+    </div>
+    <div style="background:#0f172a;border-radius:6px;padding:8px">
+      <div style="font-size:10px;color:#475569;margin-bottom:2px">Gross Margin</div>
+      <div style="font-weight:700;font-size:13px">{rec['margin']:.0%}</div>
+    </div>
+    <div style="background:#0f172a;border-radius:6px;padding:8px">
+      <div style="font-size:10px;color:#475569;margin-bottom:2px">Rev. at Risk</div>
+      <div style="font-weight:700;font-size:13px;color:#f97316">${rec['rev_risk']:.0f}</div>
+    </div>
+    <div style="background:#0f172a;border-radius:6px;padding:8px">
+      <div style="font-size:10px;color:#475569;margin-bottom:2px">Order Qty</div>
+      <div style="font-weight:700;font-size:13px;color:#38bdf8">{rec['order_qty']:.0f} {rec['unit']}</div>
+    </div>
   </div>
-  <div style="font-size:12px;color:#94a3b8;border-top:1px solid #334155;padding-top:8px;line-height:1.6">
-    <span style="color:#64748b">Business:</span> {rec['reasons']['business']}<br>
-    <span style="color:#64748b">Calculation:</span> {rec['reasons']['calc']}<br>
-    <span style="color:#64748b">Demand signal:</span> {rec['reasons']['demand']}
+  <div style="font-size:12px;color:#64748b;border-top:1px solid #1e293b;padding-top:8px;line-height:1.7">
+    <span style="color:#475569">◆ Business:</span> {rec['reasons']['business']}<br>
+    <span style="color:#475569">◆ Calculation:</span> {rec['reasons']['calc']}<br>
+    <span style="color:#475569">◆ Demand signal:</span> {rec['reasons']['demand']}
   </div>
 </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
 
     # ── Buyer's Brief ─────────────────────────────────────────────────────────
-    st.markdown("#### 🤖 Buyer's Brief")
+    st.markdown('<div class="section-header">Buyer\'s Brief</div>', unsafe_allow_html=True)
     brief = fallback_buyer_brief(all_recs, species_now, fishing_score_now)
     st.markdown(
         f'<div class="metric-card" style="border-left:4px solid #38bdf8;font-size:14px;line-height:1.7">{brief}</div>',
@@ -517,18 +701,23 @@ with tab4:
     st.markdown("---")
 
     # ── Stock Level Gauges + DoS chart ────────────────────────────────────────
-    st.markdown("#### 📊 Stock Levels")
+    st.markdown('<div class="section-header">Stock Levels</div>', unsafe_allow_html=True)
     gauge_cols = st.columns(3)
     for i, (sku_key, label) in enumerate(list(config.SKU_CATEGORIES.items())[:6]):
-        sku = inventory[sku_key]
+        sku  = inventory[sku_key]
+        rec  = next((r for r in all_recs if r["sku_key"] == sku_key), None)
+        rop_val  = rec["rop"] if rec else None
+        max_val  = max(sku["on_hand"] * 1.5, (rop_val or 0) * 2.5, 1)
         with gauge_cols[i % 3]:
-            st.plotly_chart(build_gauge(label, sku["on_hand"], sku["on_hand"] * 1.5, sku["unit"]),
-                            use_container_width=True)
+            st.plotly_chart(
+                build_gauge(label, sku["on_hand"], max_val, sku["unit"], rop=rop_val),
+                use_container_width=True,
+            )
     st.plotly_chart(build_dos_chart(dos_data), use_container_width=True)
 
     # ── Why Not? ──────────────────────────────────────────────────────────────
     if healthy:
-        st.markdown("#### ✅ Why Not Reorder?")
+        st.markdown('<div class="section-header">Why Not Reorder?</div>', unsafe_allow_html=True)
         for rec in healthy:
             why = why_not_reorder(rec["label"], rec["dos"], rec["lead_time"],
                                   rec["rop"], rec["on_hand"])
@@ -538,8 +727,12 @@ with tab4:
                 unsafe_allow_html=True,
             )
 with tab5:
-    st.markdown("### 🤖 AI Planning Brief")
-    st.caption("AI synthesizes all signals into a Monday morning buyer's memo.")
+    st.markdown(
+        f'<div class="source-row">{source_badge_html("groq")} '
+        f'<span style="font-size:10px;color:#334155">AI synthesizes all signals into a Monday morning buyer\'s memo</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     from ai.brief import build_brief_prompt, generate_brief_streaming
     from inventory.model import days_of_supply, safety_stock, reorder_point, SERVICE_LEVEL_Z
