@@ -2,7 +2,7 @@
 SHOP_LAT = 42.8126
 SHOP_LON = -70.8773
 SHOP_REGION = "Newburyport, MA"
-NOAA_STATION_ID = "8440625"  # Gloucester, MA — ~15 miles from Newburyport; verify at tidesandcurrents.noaa.gov
+NOAA_STATION_ID = "8440466"  # Newburyport, Merrimack River MA — exact match for shop location
 DEFAULT_LEAD_TIME_DAYS = 5
 DEFAULT_SERVICE_LEVEL = 0.95
 

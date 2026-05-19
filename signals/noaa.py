@@ -46,12 +46,20 @@ def fetch_water_temp(station_id: str) -> float:
     r = requests.get(_BASE, params=params, timeout=10)
     r.raise_for_status()
     payload = r.json()
-    if "error" in payload:
-        raise ValueError(payload["error"].get("message", "NOAA API error"))
-    data = payload.get("data", [])
-    if not data:
-        return 55.0  # fallback if station doesn't report temp
-    return float(data[-1]["v"])
+    if "error" not in payload:
+        data = payload.get("data", [])
+        if data:
+            return float(data[-1]["v"])
+    # CO-OPS station has no water temp sensor — fall back to NDBC buoy 44013 (Boston offshore)
+    try:
+        resp = requests.get("https://www.ndbc.noaa.gov/data/realtime2/44013.txt", timeout=10)
+        lines = [l for l in resp.text.splitlines() if not l.startswith("#")]
+        if lines:
+            wtmp_c = float(lines[0].split()[14])
+            return round(wtmp_c * 9 / 5 + 32, 1)
+    except Exception:
+        pass
+    return 55.0
 
 def classify_tide_quality(max_range: float, num_peaks: int) -> str:
     if max_range >= 6.0 and num_peaks >= 2:
