@@ -1,18 +1,7 @@
-import os
-import praw
+import requests
 import config
 
-
-def get_reddit_client() -> praw.Reddit:
-    client_id = os.environ.get("REDDIT_CLIENT_ID")
-    client_secret = os.environ.get("REDDIT_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise EnvironmentError("Reddit credentials not configured")
-    return praw.Reddit(
-        client_id=client_id,
-        client_secret=client_secret,
-        user_agent=os.environ.get("REDDIT_USER_AGENT", "TideStock/1.0"),
-    )
+_HEADERS = {"User-Agent": "TideStock/1.0 (portfolio project; read-only public data)"}
 
 
 def extract_bait_mentions(text: str, keywords: list) -> list:
@@ -29,24 +18,30 @@ def classify_velocity(upvotes: int, comments: int) -> str:
 
 
 def fetch_reddit_signals(limit: int = 10) -> list:
-    reddit = get_reddit_client()
     posts = []
     for sub_name in config.REDDIT_SUBREDDITS:
-        sub = reddit.subreddit(sub_name)
-        for post in sub.new(limit=limit):
-            mentions = extract_bait_mentions(
-                f"{post.title} {post.selftext}", config.FISHING_KEYWORDS
-            )
-            velocity = classify_velocity(post.score, post.num_comments)
-            posts.append({
-                "title": post.title,
-                "subreddit": sub_name,
-                "upvotes": post.score,
-                "comments": post.num_comments,
-                "url": f"https://reddit.com{post.permalink}",
-                "bait_mentions": mentions,
-                "velocity": velocity,
-            })
+        try:
+            url = f"https://www.reddit.com/r/{sub_name}/new.json?limit={limit}"
+            resp = requests.get(url, headers=_HEADERS, timeout=10)
+            resp.raise_for_status()
+            children = resp.json()["data"]["children"]
+            for child in children:
+                d = child["data"]
+                mentions = extract_bait_mentions(
+                    f"{d['title']} {d.get('selftext', '')}", config.FISHING_KEYWORDS
+                )
+                velocity = classify_velocity(d["score"], d["num_comments"])
+                posts.append({
+                    "title": d["title"],
+                    "subreddit": sub_name,
+                    "upvotes": d["score"],
+                    "comments": d["num_comments"],
+                    "url": f"https://reddit.com{d['permalink']}",
+                    "bait_mentions": mentions,
+                    "velocity": velocity,
+                })
+        except Exception:
+            continue
     posts.sort(key=lambda x: x["upvotes"], reverse=True)
     return posts[:15]
 

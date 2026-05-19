@@ -105,7 +105,7 @@ with st.sidebar:
 <div style="font-size:12px;color:#64748b;line-height:1.6">
 • Seed inventory data powers all recommendations offline<br>
 • Environmental data (NOAA, weather, moon) fetches live — graceful fallback if unavailable<br>
-• Social Intel requires Reddit API keys (optional)<br>
+• Social Intel reads public Reddit feeds — no credentials needed<br>
 • AI Brief requires <code>GROQ_API_KEY</code> — free at <a href="https://console.groq.com" style="color:#38bdf8">console.groq.com</a>
 </div>
 """, unsafe_allow_html=True)

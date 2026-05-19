@@ -84,11 +84,10 @@ Set in `.env` for local dev or Streamlit Cloud Secrets for deployment:
 
 ```
 GROQ_API_KEY=...          # free at console.groq.com
-REDDIT_CLIENT_ID=...      # free script app at reddit.com/prefs/apps
-REDDIT_CLIENT_SECRET=...
-REDDIT_USER_AGENT=TideStock/1.0
 EXA_API_KEY=...           # free tier at exa.ai
 ```
+
+Reddit data is fetched from the public JSON API — no credentials required.
 
 ---
 
