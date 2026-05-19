@@ -13,8 +13,11 @@ def build_brief_prompt(
     service_level: float = 0.95,
 ) -> str:
     scenario_line = f"\nACTIVE SCENARIO: {active_scenario}" if active_scenario else ""
+    def _safe(text: str, max_len: int = 50) -> str:
+        return text.replace("\n", " ").replace("\r", " ")[:max_len]
+
     tournament_line = (
-        "Upcoming tournaments: " + ", ".join(t["title"][:50] for t in tournaments[:2])
+        "Upcoming tournaments: " + ", ".join(_safe(t["title"]) for t in tournaments[:2])
         if tournaments else "No tournaments in near-term calendar."
     )
     trend_line = ", ".join(trend_alerts) if trend_alerts else "No significant trend spikes."

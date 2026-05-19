@@ -250,10 +250,14 @@ with tab2:
         # Tournament calendar
         st.markdown("**Upcoming Tournaments**")
         if tournaments:
+            from html import escape
             for t in tournaments:
+                safe_title = escape(t["title"])[:70]
+                raw_url = t.get("url", "")
+                safe_url = escape(raw_url) if raw_url.startswith(("https://", "http://")) else "#"
                 st.markdown(
-                    f'<div class="metric-card"><div style="color:#fbbf24;font-size:13px">🏆 {t["title"][:70]}</div>'
-                    f'<a href="{t["url"]}" style="color:#64748b;font-size:11px">Source ↗</a></div>',
+                    f'<div class="metric-card"><div style="color:#fbbf24;font-size:13px">🏆 {safe_title}</div>'
+                    f'<a href="{safe_url}" style="color:#64748b;font-size:11px">Source ↗</a></div>',
                     unsafe_allow_html=True,
                 )
         else:
