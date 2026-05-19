@@ -2,7 +2,7 @@
 
 > AI-assisted inventory intelligence dashboard for a coastal bait and tackle shop.
 
-**Live demo coming soon**
+**[→ Live Demo](https://tidestock-ncjzm6vw5q7umpahfexwgy.streamlit.app)**
 
 ---
 
@@ -114,7 +114,7 @@ See [`docs/ai-development-log.md`](docs/ai-development-log.md) for a full breakd
 
 ## Resume Summary
 
-> Built AI-powered bait shop demand intelligence dashboard — integrates NOAA tide predictions, moon phase, Reddit social velocity (PRAW), and Google Trends signals into interactive Plotly scenario simulations and Groq-powered weekly planning briefs with per-SKU reorder explainability; designed for Streamlit Cloud deployment.
+> Built AI-powered bait shop demand intelligence dashboard — integrates NOAA tide predictions, moon phase, Reddit social velocity (PRAW), and Google Trends signals into interactive Plotly scenario simulations and Groq-powered weekly planning briefs with per-SKU reorder explainability; deployed on Streamlit Cloud.
 
 **Interview story:** I worked at a bait shop for four years. We'd sell out of paddle tails right when striper season peaked and over-order all winter. I built a demand planning system that combines environmental data with social signal velocity to predict demand before it happens — the same forward-looking approach Amazon and Pepsi use internally, applied to a domain I actually know.
 
