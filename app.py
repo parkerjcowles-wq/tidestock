@@ -85,9 +85,18 @@ st.markdown("""
 # ── Data loading (cached) ─────────────────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def load_conditions():
-    tide_df = fetch_tide_predictions(config.NOAA_STATION_ID, days=7)
-    water_temp = fetch_water_temp(config.NOAA_STATION_ID)
-    weather = fetch_weather(config.SHOP_LAT, config.SHOP_LON)
+    try:
+        tide_df = fetch_tide_predictions(config.NOAA_STATION_ID, days=7)
+    except Exception:
+        tide_df = pd.DataFrame(columns=["time", "height"])
+    try:
+        water_temp = fetch_water_temp(config.NOAA_STATION_ID)
+    except Exception:
+        water_temp = 55.0
+    try:
+        weather = fetch_weather(config.SHOP_LAT, config.SHOP_LON)
+    except Exception:
+        weather = {"pressure_series": pd.DataFrame(columns=["time", "pressure"]), "current_temp_f": 65.0, "current_wind_mph": 0.0, "pressure_trend": "stable"}
     week_moon = get_week_moon_data()
     today_phase = get_moon_phase(datetime.date.today())
     tide_quality = get_tide_quality(tide_df)
