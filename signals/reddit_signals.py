@@ -4,9 +4,13 @@ import config
 
 
 def get_reddit_client() -> praw.Reddit:
+    client_id = os.environ.get("REDDIT_CLIENT_ID")
+    client_secret = os.environ.get("REDDIT_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise EnvironmentError("Reddit credentials not configured")
     return praw.Reddit(
-        client_id=os.environ["REDDIT_CLIENT_ID"],
-        client_secret=os.environ["REDDIT_CLIENT_SECRET"],
+        client_id=client_id,
+        client_secret=client_secret,
         user_agent=os.environ.get("REDDIT_USER_AGENT", "TideStock/1.0"),
     )
 

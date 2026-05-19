@@ -189,13 +189,22 @@ with tab2:
 
     @st.cache_data(ttl=1800)
     def load_social():
-        posts = fetch_reddit_signals(limit=15)
-        trend_kws = get_trending_keywords(config.FISHING_KEYWORDS)
+        try:
+            posts = fetch_reddit_signals(limit=15)
+        except Exception:
+            posts = []
+        try:
+            trend_kws = get_trending_keywords(config.FISHING_KEYWORDS)
+        except Exception:
+            trend_kws = []
         try:
             trend_df = fetch_trends_data(config.FISHING_KEYWORDS)
         except Exception:
             trend_df = None
-        tournaments = fetch_tournaments(config.SHOP_REGION)
+        try:
+            tournaments = fetch_tournaments(config.SHOP_REGION)
+        except Exception:
+            tournaments = []
         velocity = get_overall_social_velocity(posts)
         return posts, trend_kws, trend_df, tournaments, velocity
 
