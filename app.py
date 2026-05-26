@@ -473,8 +473,8 @@ with st.sidebar:
         )
         st.markdown("")
 
-    st.markdown('<div style="font-size:11px;color:#8b8b8f;line-height:1.6">'
-                '25 SKUs · Newburyport, MA<br>'
+    st.markdown(f'<div style="font-size:11px;color:#8b8b8f;line-height:1.6">'
+                f'{len(all_recs)} SKUs · Newburyport, MA<br>'
                 'Environmental: live NOAA/Open-Meteo<br>'
                 'Social: live Reddit API<br>'
                 'AI Brief: Groq · LLaMA 3'
@@ -576,7 +576,7 @@ with tab1:
 
     st.markdown(
         '<div style="font-size:10px;color:#6b7280;margin:4px 0 16px;line-height:1.6">'
-        'ROP = daily demand × lead time + safety stock (z = 1.64 at 95% service level) · '
+        'ROP = daily demand × lead time + safety stock (z = 1.645 at 95% service level) · '
         'EOQ = √(2DS/H) · DoS = on-hand ÷ daily demand · '
         'Rev at Risk = (ROP − on-hand) × retail price for at-risk SKUs</div>',
         unsafe_allow_html=True,
@@ -722,7 +722,7 @@ with tab1:
 with tab2:
     st.markdown(
         f'<div class="source-row">'
-        f'<span style="font-size:10px;color:#8b8b8f">25 SKUs · Newburyport, MA · '
+        f'<span style="font-size:10px;color:#8b8b8f">{len(all_recs)} SKUs · Newburyport, MA · '
         f'Service level {int(service_pct * 100)}% · '
         f'{"Demand ×" + f"{demand_mult:.2f}" if abs(demand_mult - 1.0) > 0.05 else "Baseline demand"}'
         f'</span></div>',
@@ -1086,18 +1086,28 @@ with tab4:
             f'</div>',
             unsafe_allow_html=True,
         )
-        st.plotly_chart(
-            build_scenario_comparison(cat_base, cat_scenario, sku_labels, subtitle=SCENARIO_LABELS[active_scenario]),
-            use_container_width=True,
-        )
+        if active_scenario == "supplier_delay":
+            st.markdown(
+                '<div class="card" style="color:#fbbf24;font-size:12px;line-height:1.6">'
+                '⚠ Demand is unchanged during a supplier delay — the risk is in reduced cover time. '
+                'The status table below shows which SKUs flip status under a 3-day lead time extension.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.plotly_chart(
+                build_scenario_comparison(cat_base, cat_scenario, sku_labels, subtitle=SCENARIO_LABELS[active_scenario]),
+                use_container_width=True,
+            )
 
-        # SKU status changes table
+        # SKU status changes table — supplier_delay uses extended lead time
+        _scen_lt_extra = 3 if active_scenario == "supplier_delay" else 0
         st.markdown('<div class="section-header">SKU Status Under This Scenario</div>', unsafe_allow_html=True)
         status_rows = []
         for r in all_recs:
             scen_demand = scenario_sku_demands.get(r["sku_key"], r["avg_weekly_demand"])
             scen_dos = days_of_supply(r["on_hand"], scen_demand / 7) if scen_demand > 0 else 999
-            lt = r["lead_time"]
+            lt = r["lead_time"] + _scen_lt_extra
             if scen_dos < lt or r["on_hand"] < r["rop"] * 0.5:
                 scen_status = "Critical"
             elif r["on_hand"] < r["rop"] or scen_dos < lt * 1.5:
@@ -1113,7 +1123,11 @@ with tab4:
                 "Category":       r["category_label"],
                 "Baseline Status": r["status"],
                 "Scenario Status": scen_status,
-                "Demand Delta":   f"+{delta:.0f}" if delta >= 0 else f"{delta:.0f}",
+                "Demand Delta" if active_scenario != "supplier_delay" else "Lead Time": (
+                    (f"+{delta:.0f}" if delta >= 0 else f"{delta:.0f}")
+                    if active_scenario != "supplier_delay"
+                    else f"+{_scen_lt_extra}d"
+                ),
                 "Changed":        "Yes" if changed else "",
             })
         status_df = pd.DataFrame(status_rows)
