@@ -65,3 +65,17 @@ def test_build_scenario_comparison_scenario_colors_are_list():
     fig = build_scenario_comparison(baseline, scenario, _labels())
     scenario_trace = fig.data[1]
     assert isinstance(scenario_trace.marker.color, (list, tuple))
+
+
+def test_scenario_bar_colors_zero_baseline():
+    """Zero baseline is treated as unchanged (can't compute pct — avoid division by zero)."""
+    colors = _scenario_bar_colors({"bait": 0}, {"bait": 999})
+    assert colors[0] == "#4ade80"
+
+
+def test_scenario_bar_colors_decrease_is_green():
+    """Demand decrease is treated as unchanged — a drop is not a restock alert."""
+    baseline = {"bait": 100}
+    scenario = {"bait": 60}
+    colors = _scenario_bar_colors(baseline, scenario)
+    assert colors[0] == "#4ade80"
