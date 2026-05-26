@@ -3,6 +3,7 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
+import html
 import config
 
 
@@ -1300,7 +1301,7 @@ with tab5:
             bait_pills = "".join(
                 f'<span style="background:#1a2a1a;color:#4ade80;border:1px solid #2a4a2a;'
                 f'border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace">'
-                f'{b}</span>'
+                f'{html.escape(b)}</span>'
                 for b in p.get("bait_mentions", [])
             )
             cards_html.append(
@@ -1308,12 +1309,12 @@ with tab5:
                 f'background:#1a1a1e;border:1px solid #2a2a2e;border-radius:8px;margin-bottom:8px">'
                 f'<span style="background:#431407;color:#fb923c;border:1px solid #7c2d12;'
                 f'border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;font-family:monospace;'
-                f'flex-shrink:0">r/{p.get("subreddit","")}</span>'
+                f'flex-shrink:0">r/{html.escape(p.get("subreddit",""))}</span>'
                 f'<div style="flex:1;min-width:0">'
-                f'<div style="font-size:12px;color:#c8c8cc;line-height:1.4">"{p.get("title","")}"</div>'
+                f'<div style="font-size:12px;color:#c8c8cc;line-height:1.4">"{html.escape(p.get("title",""))}"</div>'
                 f'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">{bait_pills}</div>'
                 f'</div>'
-                f'<div style="font-size:10px;color:#6b7280;flex-shrink:0;padding-top:2px">{p.get("time_ago","")}</div>'
+                f'<div style="font-size:10px;color:#6b7280;flex-shrink:0;padding-top:2px">{html.escape(p.get("time_ago",""))}</div>'
                 f'</div>'
             )
 
@@ -1324,11 +1325,11 @@ with tab5:
                 f'background:#1a1a1e;border:1px solid #2a2a2e;border-radius:8px;margin-bottom:8px">'
                 f'<span style="background:#1a1a2a;color:{src_color};border:1px solid #2a2a3e;'
                 f'border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;font-family:monospace;'
-                f'flex-shrink:0">{r.get("source_label","")}</span>'
+                f'flex-shrink:0">{html.escape(r.get("source_label",""))}</span>'
                 f'<div style="flex:1;min-width:0">'
-                f'<div style="font-size:12px;color:#c8c8cc;line-height:1.4">"{r.get("title","")}"</div>'
+                f'<div style="font-size:12px;color:#c8c8cc;line-height:1.4">"{html.escape(r.get("title",""))}"</div>'
                 f'</div>'
-                f'<div style="font-size:10px;color:#6b7280;flex-shrink:0;padding-top:2px">{r.get("time_ago","")}</div>'
+                f'<div style="font-size:10px;color:#6b7280;flex-shrink:0;padding-top:2px">{html.escape(r.get("time_ago",""))}</div>'
                 f'</div>'
             )
 
