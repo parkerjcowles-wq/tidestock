@@ -11,34 +11,96 @@ def build_brief_prompt(
     tournaments: list,
     active_scenario: str = None,
     service_level: float = 0.95,
+    critical_skus: list = None,
+    social_posts: list = None,
+    web_reports: list = None,
 ) -> str:
     scenario_line = f"\nACTIVE SCENARIO: {active_scenario}" if active_scenario else ""
     def _safe(text: str, max_len: int = 50) -> str:
         return text.replace("\n", " ").replace("\r", " ")[:max_len]
 
     tournament_line = (
-        "Upcoming tournaments: " + ", ".join(_safe(t["title"]) for t in tournaments[:2])
-        if tournaments else "No tournaments in near-term calendar."
+        "Upcoming: " + ", ".join(_safe(t["title"]) for t in tournaments[:2])
+        if tournaments else "No tournaments on the near-term calendar."
     )
-    trend_line = ", ".join(trend_alerts) if trend_alerts else "No significant trend spikes."
+    trend_line = ", ".join(trend_alerts) if trend_alerts else "No significant Google Trends spikes."
     inv_lines = "\n".join(
-        f"  {label}: {summary['dos']:.0f} days of supply ({summary['urgency']})"
+        f"  {label}: {summary['dos']:.0f} days of supply — {summary['urgency']}"
+        + (f" ({summary['critical_skus']} critical SKU{'s' if summary['critical_skus'] != 1 else ''})" if summary.get('critical_skus') else "")
         for label, summary in inventory_summary.items()
     )
-    return f"""You are a senior buyer at a New England bait shop preparing the Monday morning planning brief.
-Write a concise S&OP-style memo (200–250 words) using ONLY the data below.
-Use planning language: recommend, signal, risk, action required.
-Format with these sections: Conditions Outlook | Hot SKUs This Week | Reorder Actions | Risk Watch
+    critical_block = ""
+    if critical_skus:
+        critical_block = "\nCRITICAL + REORDER SKUs:\n" + "\n".join(
+            f"  • {r['product_name']}: {r['on_hand']} {r['unit']} on hand, ROP={r['rop']:.0f}, DoS={r['dos']:.0f}d, lead time={r['lead_time']}d"
+            for r in critical_skus[:10]
+        )
 
-LOCATION: {config.SHOP_REGION}
+    # Build social intelligence block
+    social_intel_block = ""
+    if social_posts or web_reports:
+        sections = []
+        if social_posts:
+            post_lines = "\n".join(
+                f"  • r/{p['subreddit']}: \"{p['title'][:120]}\" — baits: {', '.join(p['bait_mentions'])}, {p['time_ago']}"
+                for p in social_posts[:4]
+            )
+            sections.append(f"  Reddit posts (catching sentiment, bait mentions):\n{post_lines}")
+        if web_reports:
+            report_lines = "\n".join(
+                f"  • {r['source_label']}: \"{r['title'][:120]}\" — {r['time_ago']}"
+                for r in web_reports[:3]
+            )
+            sections.append(f"  Web reports (last 14 days):\n{report_lines}")
+        combined = "\n".join(sections)
+        social_intel_block = f"""
+SOCIAL INTELLIGENCE (cite these directly in your brief):
+{combined}
+
+When writing Fishing Intelligence and Reorder Rationale: quote or directly reference these posts by source. Be specific — name the subreddit or publication and what they reported. Example: 'r/SaltwaterFishing reports bucktails slammed by stripers this week — your bucktail stock is at 6d DoS, pull the reorder forward.'
+"""
+
+    moon_phase = conditions.get('moon_phase', 'unknown').replace('_', ' ')
+    moon_fishing_note = {
+        "full": "Full moon drives nighttime surface feeding — expect strong topwater and soft plastic demand.",
+        "new": "New moon period — tidal swings are stronger, fish concentrate near structure.",
+        "waxing gibbous": "Waxing gibbous — building moon energy, bite improving through the week.",
+        "waning gibbous": "Waning gibbous — post-full moon, fish still active but moving off the peak.",
+        "first quarter": "First quarter — moderate tides, reliable bite window morning and evening.",
+        "last quarter": "Last quarter — fish transitioning, focus on current edges and drop-offs.",
+        "waxing crescent": "Waxing crescent — light moon, daytime bite strongest.",
+        "waning crescent": "Waning crescent — low light, predators less active near surface.",
+    }.get(moon_phase.lower(), "")
+
+    return f"""You are Dave, the AI fishing and supply chain assistant at Dave's Bait & Tackle in Newburyport, MA (Plum Island area). You write the morning intel brief for the buyer — direct, specific, and grounded in the data below.
+
+Output EXACTLY in this format (use these exact section headers, nothing else):
+
+## 📦 Reorder Now
+• **[Product Name]** — [one sharp sentence: what's at risk, why it's urgent TODAY, which species or condition is driving it]
+• (list every product with status Critical or Reorder Soon; if none, write "All SKUs above reorder point — no urgent action today.")
+
+## 🌊 Conditions Overview
+[3–4 sentences. Cover: moon phase and what it means for the bite (cite the phase by name), barometric pressure trend and fish activity, water temperature vs. optimal range, tide quality. Be specific — use the actual values. Then one sentence on what this combination means for fishing this week at Plum Island / Newburyport.]
+
+## 🎣 Fishing Intelligence
+[2 sentences. What species are active and what baits/rigs are working based on social signals and the species calendar. Reference specific bait categories that should see elevated demand this week.]
+
+## 📋 Reorder Rationale
+• **[Product Name]**: [Explain why — days of supply vs. lead time, which demand driver makes it urgent (species activity, conditions, tournament, social signal). What happens if the buyer waits.]
+• (one bullet per product listed in Reorder Now)
+
+---
+
+LOCATION: {config.SHOP_REGION} (Plum Island area)
 DATE: {conditions.get('date', 'today')}
+TARGET SERVICE LEVEL: {int(service_level * 100)}%
 
-ENVIRONMENTAL CONDITIONS:
-  Moon phase: {conditions.get('moon_phase', 'unknown').replace('_', ' ')}
-  Tide quality: {conditions.get('tide_quality', 'moderate')}
-  Barometric pressure: {conditions.get('pressure_trend', 'stable')}
-  Water temperature: {conditions.get('water_temp', 55):.1f}°F
-  Fishing score: {conditions.get('fishing_score', 70)}/100
+MOON PHASE: {moon_phase}{(' — ' + moon_fishing_note) if moon_fishing_note else ''}
+TIDE QUALITY: {conditions.get('tide_quality', 'moderate')}
+BAROMETRIC PRESSURE: {conditions.get('pressure_trend', 'stable')}
+WATER TEMPERATURE: {conditions.get('water_temp', 55):.1f}°F (optimal striper range: 52–68°F)
+FISHING SCORE: {conditions.get('fishing_score', 70)}/100
 
 SPECIES ACTIVITY: {', '.join(f"{sp}: {lvl}" for sp, lvl in conditions.get('species', {}).items())}
 
@@ -47,28 +109,34 @@ SOCIAL SIGNALS:
   Google Trends alerts: {trend_line}
   {tournament_line}
 
-INVENTORY STATUS (days of supply):
+INVENTORY STATUS BY CATEGORY:
 {inv_lines}
-
-TARGET SERVICE LEVEL: {int(service_level * 100)}%
+{critical_block}
 {scenario_line}
-
-Write the planning brief now:"""
+{social_intel_block}
+Write Dave's morning intel brief now:"""
 
 
 def generate_brief_streaming(prompt: str):
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         yield (
-            "**Demo Mode — AI brief unavailable** (no `GROQ_API_KEY` configured).\n\n"
-            "Add your free Groq API key to Streamlit secrets to enable the AI-generated S&OP memo. "
-            "The **Buyer's Brief** in the Inventory tab provides a deterministic summary that works without any API key."
+            "## 📦 Reorder Now\n"
+            "*Configure your Groq API key to get Dave's live reorder recommendations.*\n\n"
+            "## 🌊 Conditions Overview\n"
+            "*Add `GROQ_API_KEY` to your `.env` file to unlock the full AI brief. "
+            "The Quick Summary below uses deterministic logic and always works.*\n\n"
+            "## 🎣 Fishing Intelligence\n"
+            "*No API key — demo mode active.*\n\n"
+            "## 📋 Reorder Rationale\n"
+            "*Set `GROQ_API_KEY=your_key` in `.env` to enable.*"
         )
         return
     client = groq.Groq(api_key=api_key)
     stream = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        max_tokens=512,
+        max_tokens=900,
+        temperature=0.4,
         messages=[{"role": "user", "content": prompt}],
         stream=True,
     )
@@ -76,3 +144,16 @@ def generate_brief_streaming(prompt: str):
         text = chunk.choices[0].delta.content
         if text:
             yield text
+
+
+def build_ask_dave_prompt(question: str, conditions: dict, social_velocity: str, species: dict) -> str:
+    return f"""You are Dave, the AI fishing assistant at Dave's Bait & Tackle in Newburyport, MA (Plum Island area).
+Answer this question in 2–4 sentences. Be direct and specific. Use the current conditions below.
+
+Current conditions: Moon {conditions.get('moon_phase','').replace('_',' ')}, tides {conditions.get('tide_quality','moderate')}, pressure {conditions.get('pressure_trend','stable')}, water temp {conditions.get('water_temp',55):.0f}°F, fishing score {conditions.get('fishing_score',70)}/100.
+Species active: {', '.join(f"{sp} ({lvl})" for sp, lvl in species.items())}
+Social signal: {social_velocity}
+
+Question: {question}
+
+Dave's answer:"""
