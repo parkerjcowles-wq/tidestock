@@ -102,7 +102,13 @@ pytest tests/ -v
 
 ## Screenshots
 
-*TODO: Add screenshots of Command Center, Demand Signals, and AI Brief tabs after Streamlit Cloud deployment.*
+*To capture from the running app before final push (save under `docs/screenshots/`, reference with relative links):*
+
+- [ ] Command Center — KPI strip + sortable inventory table
+- [ ] Inventory — gauges, Days of Supply, Revenue at Risk
+- [ ] Demand Signals — tides, barometric pressure, web fishing reports
+- [ ] Scenario Simulator — signal weight sliders + scenario presets
+- [ ] AI Brief — Dave's Morning Intel + Ask Dave
 
 ---
 
@@ -122,7 +128,7 @@ See [`docs/ai-development-log.md`](docs/ai-development-log.md) for a full breakd
 
 ## What This Demonstrates
 
-- **AI-assisted product development** — Claude and Groq used as collaborators, not black boxes; all recommendations are computed deterministically first, then explained by AI
+- **AI-assisted product development** — Claude assisted development (architecture, code generation, review); Groq/LLaMA powers the in-app planning briefs at runtime. All recommendations are computed deterministically first, then explained by AI
 - **Inventory modeling** — safety stock, reorder point, EOQ, and days of supply applied to a real business domain with per-SKU lead times and demand variability
 - **Explainable decision support** — every reorder recommendation includes a business reason, calculation reason, and demand signal reason; confidence scores make uncertainty visible
 - **Streamlit dashboard development** — multi-tab layout, sidebar what-if controls, Plotly interactive charts, custom CSS card components, real-time recalculation on slider changes

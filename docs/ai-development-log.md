@@ -25,7 +25,7 @@ AI caught a bug where `safety_stock()` was being called with four arguments but 
 AI generated the initial test suite covering NOAA API error handling, moon phase calculations, and inventory formula edge cases. I reviewed each test for correctness and added edge cases AI missed — specifically the case where a NOAA station returns HTTP 200 with an error body (a known API quirk that would have silently failed in production).
 
 ### Data Sourcing
-All API integrations (NOAA CO-OPS, Open-Meteo, PRAW, pytrends, Exa) were chosen by me based on what data a real bait shop buyer would care about. AI wrote the fetcher code; I identified the correct NOAA station ID for Newburyport (8440466) and the NDBC buoy fallback (44013) for water temperature from prior fishing research.
+All API integrations (NOAA CO-OPS, Open-Meteo, Reddit Public JSON API, pytrends, Exa) were chosen by me based on what data a real bait shop buyer would care about. AI wrote the fetcher code; I identified the correct NOAA station ID for Newburyport (8440466) and the NDBC buoy fallback (44013) for water temperature from prior fishing research.
 
 ### AI Planning Brief
 The Groq/LLaMA prompt was co-designed: I specified the S&OP memo format, the signal inputs, and the planning language ("recommend," "risk," "action required"). The AI generates the text; the underlying data it reasons over is all computed deterministically by the signal weighting engine.
