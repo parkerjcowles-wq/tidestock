@@ -3,7 +3,9 @@ import ephem
 
 _PEAK_PHASES = {"new", "full"}
 
-_PRESSURE_BONUS = {"rising": 20, "stable": 0, "falling": -20}
+# Falling pressure ahead of an approaching front triggers aggressive feeding —
+# the strongest bite window. Rising/post-front conditions are comparatively slow.
+_PRESSURE_BONUS = {"rising": 0, "stable": 0, "falling": 20}
 
 def get_moon_phase(date: datetime.date) -> str:
     m = ephem.Moon(date.isoformat())

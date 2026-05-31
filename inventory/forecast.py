@@ -5,7 +5,7 @@ SIGNAL_MULTIPLIERS = {
     },
     "tide": {"prime": 1.6, "moderate": 1.2, "poor": 0.8},
     "social": {"trending": 2.0, "elevated": 1.4, "baseline": 1.0},
-    "pressure": {"rising": 1.3, "stable": 1.0, "falling": 0.8},
+    "pressure": {"rising": 0.9, "stable": 1.0, "falling": 1.3},
     "tournament": {"within_3_days": 2.2, "same_week": 1.5, "none": 1.0},
     "season": {"peak": 1.7, "shoulder": 1.2, "off": 0.7},
 }

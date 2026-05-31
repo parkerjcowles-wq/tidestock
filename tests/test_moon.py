@@ -15,9 +15,11 @@ def test_fishing_score_new_moon_rising():
     score = get_fishing_score(moon_phase="new", pressure_trend="rising")
     assert score >= 80
 
-def test_fishing_score_waning_falling():
-    score = get_fishing_score(moon_phase="waning_crescent", pressure_trend="falling")
-    assert score <= 60
+def test_falling_pressure_boosts_bite():
+    # Falling pressure = aggressive pre-front feeding → stronger bite than rising
+    falling = get_fishing_score(moon_phase="waning_crescent", pressure_trend="falling")
+    rising  = get_fishing_score(moon_phase="waning_crescent", pressure_trend="rising")
+    assert falling > rising
 
 def test_week_data_length():
     data = get_week_moon_data()

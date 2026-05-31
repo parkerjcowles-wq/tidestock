@@ -39,7 +39,7 @@ demand_index = base_demand × Σ(signal_multiplier[i] × weight[i]) / Σ(weight[
 | Moon phase | Crescent 1.0× | Quarter 1.2× | New/Full 1.8× |
 | Tide quality | Poor 0.8× | Moderate 1.2× | Prime 1.6× |
 | Social velocity | Baseline 1.0× | Elevated 1.4× | Trending 2.0× |
-| Barometric pressure | Falling 0.8× | Stable 1.0× | Rising 1.3× |
+| Barometric pressure | Rising 0.9× | Stable 1.0× | Falling 1.3× |
 | Tournament proximity | None 1.0× | Same week 1.5× | Within 3 days 2.2× |
 | Species season | Off 0.7× | Shoulder 1.2× | Peak 1.7× |
 
