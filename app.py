@@ -1278,7 +1278,7 @@ with tab5:
         full_brief = ""
         for chunk in generate_brief_streaming(prompt):
             full_brief += chunk
-            brief_placeholder.markdown(_render_brief(full_brief), unsafe_allow_html=True)
+            brief_placeholder.markdown(_render_brief(_dave_md(full_brief)), unsafe_allow_html=True)
         st.session_state["dave_brief"] = full_brief
         st.session_state["dave_brief_time"] = datetime.datetime.now().strftime("%I:%M %p")
         st.session_state["dave_intel_posts"] = _dave_posts
