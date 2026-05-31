@@ -2,24 +2,26 @@
 SHOP_LAT = 42.8126
 SHOP_LON = -70.8773
 SHOP_REGION = "Newburyport, MA"
-NOAA_STATION_ID = "8440466"  # Newburyport, Merrimack River MA — exact match for shop location
+NOAA_STATION_ID = "8440466"  # Newburyport, Merrimack River MA
 DEFAULT_LEAD_TIME_DAYS = 5
 DEFAULT_SERVICE_LEVEL = 0.95
 
 SKU_CATEGORIES = {
-    "soft_plastics": "Soft Plastics",
-    "hard_baits": "Hard Baits",
-    "live_bait": "Live Bait",
+    "soft_plastics":  "Soft Plastics",
+    "hard_baits":     "Hard Baits",
+    "bait":           "Bait",
     "terminal_tackle": "Terminal Tackle",
     "bucktails_jigs": "Bucktails & Jigs",
-    "accessories": "Accessories",
+    "line_leaders":   "Line & Leaders",
+    "accessories":    "Accessories",
 }
 
 FISHING_KEYWORDS = [
     "paddle tail", "ned rig", "bucktail", "crankbait", "topwater",
     "striper", "sandeel", "bunker", "fluke", "porgy"
 ]
-REDDIT_SUBREDDITS = ["fishing", "bassfishing", "stripers", "kayakfishing"]
+REDDIT_SUBREDDITS = ["surf_fishing", "SaltwaterFishing", "fishing"]
+REDDIT_LOCATION_QUERY = "Plum Island fishing OR Newburyport fishing OR Merrimack River striped bass"
 
 SPECIES_CALENDAR = {
     1:  {"Striped Bass": "Inactive", "Largemouth Bass": "Low",  "Flounder": "Inactive"},

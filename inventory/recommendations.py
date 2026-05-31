@@ -1,16 +1,37 @@
+import math
+from statistics import NormalDist
+
+_norm = NormalDist()
+
 SKU_SPECIES_MAP = {
     "bucktails_jigs": ["Striped Bass", "Flounder"],
     "soft_plastics":  ["Striped Bass", "Largemouth Bass"],
-    "live_bait":      ["Striped Bass", "Flounder"],
+    "bait":           ["Striped Bass", "Flounder"],
     "hard_baits":     ["Striped Bass", "Largemouth Bass"],
     "terminal_tackle": ["Striped Bass", "Largemouth Bass", "Flounder"],
+    "line_leaders":   [],
     "accessories":    [],
 }
 
 SKU_SEASONAL = {
-    "bucktails_jigs": True, "soft_plastics": True, "live_bait": True,
-    "hard_baits": True, "terminal_tackle": False, "accessories": False,
+    "bucktails_jigs": True, "soft_plastics": True, "bait": True,
+    "hard_baits": True, "terminal_tackle": False, "line_leaders": False, "accessories": False,
 }
+
+
+def newsvendor_order_qty(daily_demand: float, std_daily: float,
+                         shelf_life_days: int, unit_cost: float,
+                         retail_price: float) -> float:
+    """
+    Newsvendor optimal order quantity for perishables.
+    Critical ratio = Cu / (Cu + Co) where Cu = lost margin, Co = waste cost.
+    For bait, Cu = retail margin and Co = unit cost — so CR = gross margin.
+    """
+    cr = (retail_price - unit_cost) / retail_price if retail_price > 0 else 0.5
+    cr = max(0.01, min(0.99, cr))
+    mu = daily_demand * shelf_life_days
+    sigma = std_daily * math.sqrt(max(shelf_life_days, 1))
+    return max(0.0, mu + sigma * _norm.inv_cdf(cr))
 
 
 def gross_margin(unit_cost: float, retail_price: float) -> float:
@@ -26,8 +47,10 @@ def revenue_at_risk(on_hand: float, rop: float, retail_price: float) -> float:
 def urgency_score(
     on_hand: float, rop: float, dos: float, lead_time: int,
     fishing_score: int, striper_active: bool, sku_key: str, margin: float,
+    is_seasonal=None, is_perishable: bool = False, shelf_life_days=None,
+    social_sku_boost: int = 0,
 ) -> int:
-    seasonal = SKU_SEASONAL.get(sku_key, False)
+    seasonal = is_seasonal if is_seasonal is not None else SKU_SEASONAL.get(sku_key, False)
     score = 0
     if on_hand < rop:
         score += 30
@@ -45,14 +68,20 @@ def urgency_score(
         score += 10
     if striper_active and seasonal:
         score += 5
+    if is_perishable:
+        score += 8
+    if is_perishable and shelf_life_days and dos > shelf_life_days * 0.85:
+        score += 10
+    score += min(social_sku_boost, 15)
     return min(score, 100)
 
 
 def confidence_label(
     on_hand: float, rop: float, dos: float, lead_time: int,
     fishing_score: int, striper_active: bool, sku_key: str,
+    is_seasonal=None,
 ) -> str:
-    seasonal = SKU_SEASONAL.get(sku_key, False)
+    seasonal = is_seasonal if is_seasonal is not None else SKU_SEASONAL.get(sku_key, False)
     strong = sum([
         on_hand < rop,
         dos < lead_time,
@@ -69,9 +98,10 @@ def confidence_label(
 def reason_card(
     sku_key: str, on_hand: float, rop: float, dos: float, lead_time: int,
     fishing_score: int, striper_active: bool, margin: float, species_active: dict,
+    species_tags=None, is_seasonal=None,
 ) -> dict:
-    seasonal = SKU_SEASONAL.get(sku_key, False)
-    species = SKU_SPECIES_MAP.get(sku_key, [])
+    seasonal = is_seasonal if is_seasonal is not None else SKU_SEASONAL.get(sku_key, False)
+    species = species_tags if species_tags is not None else SKU_SPECIES_MAP.get(sku_key, [])
 
     if margin >= 0.40 and seasonal:
         business = "High-margin item with strong seasonal demand"
@@ -88,6 +118,8 @@ def reason_card(
         calc = f"{dos:.0f}d of supply remaining; approaching reorder threshold"
 
     active_for_sku = [sp for sp in species if species_active.get(sp) in ("Peak", "Good")]
+    if not active_for_sku and striper_active and "Striped Bass" in species:
+        active_for_sku = ["Striped Bass"]
     if active_for_sku and fishing_score >= 70:
         demand = f"{' & '.join(active_for_sku)} season active; fishing signal {fishing_score}/100"
     elif active_for_sku:
@@ -115,7 +147,7 @@ def fallback_buyer_brief(ranked: list, species_active: dict, fishing_score: int)
 
     if not flagged:
         return (
-            f"Inventory is healthy across all categories. "
+            f"Inventory is healthy across all SKUs. "
             f"Fishing signal is at {fishing_score}/100 — monitor conditions heading into the weekend. "
             f"No immediate reorder actions required."
         )

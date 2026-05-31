@@ -9,3 +9,7 @@ dist/
 venv/
 .venv/
 env/
+.claude/
+.superpowers/
+docs/superpowers/
+CLAUDE.md

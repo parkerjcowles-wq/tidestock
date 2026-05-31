@@ -18,7 +18,7 @@ DEFAULT_WEIGHTS = {
 SCENARIO_EFFECTS = {
     "tournament_weekend": {"terminal_tackle": 2.2, "soft_plastics": 1.5, "hard_baits": 1.3},
     "viral_bait_moment":  {"soft_plastics": 3.0, "hard_baits": 1.5},
-    "cold_front":         {"live_bait": 0.6, "soft_plastics": 0.7, "hard_baits": 0.8},
+    "cold_front":         {"bait": 0.6, "soft_plastics": 0.7, "hard_baits": 0.8},
     "striper_run_peak":   {"soft_plastics": 2.0, "bucktails_jigs": 2.2, "accessories": 1.3},
     "tourist_season":     {"accessories": 1.6, "hard_baits": 1.4, "terminal_tackle": 1.3, "soft_plastics": 1.2},
     "supplier_delay":     {},
@@ -51,5 +51,18 @@ def compute_demand_index(
 
 
 def compute_scenario_demand(base_demands: dict, scenario_key: str) -> dict:
+    """base_demands keyed by sku_key (category-level, legacy)."""
     effects = SCENARIO_EFFECTS.get(scenario_key, {})
     return {sku: base * effects.get(sku, 1.0) for sku, base in base_demands.items()}
+
+
+def compute_scenario_demand_by_category(sku_items: list, scenario_key: str) -> dict:
+    """
+    sku_items: list of (sku_key, base_demand, category_key) tuples.
+    Returns dict of sku_key → adjusted demand using category-level scenario effects.
+    """
+    effects = SCENARIO_EFFECTS.get(scenario_key, {})
+    return {
+        sku_key: base_demand * effects.get(category_key, 1.0)
+        for sku_key, base_demand, category_key in sku_items
+    }

@@ -1,6 +1,6 @@
-# 🎣 TideStock — Bait Shop Demand Intelligence
+# TideStock — Bait Shop Inventory Command Center
 
-> AI-assisted inventory intelligence dashboard for a coastal bait and tackle shop.
+> AI-assisted inventory command center for bait shop purchasing — SKU-level reorder decisions driven by environmental signals, social velocity, and supply chain math.
 
 **[→ Live Demo](https://tidestock-ncjzm6vw5q7umpahfexwgy.streamlit.app)**
 
@@ -18,11 +18,11 @@ TideStock is what I'd have wanted: a Monday morning dashboard that combines envi
 
 | Tab | What you get |
 |---|---|
-| 🌊 Conditions | Live NOAA tide predictions, moon phase fishing scores, barometric pressure trends, water temperature, species activity by month |
-| 📡 Social Intel | Reddit fishing community signal feed, Google Trends spikes for bait keywords, tournament calendar via Exa |
-| 🎛️ Scenario Sim | Adjust signal weights in real time, toggle preset scenarios (tournament weekend, viral bait, cold front, striper run), before/after demand comparison |
-| 📦 Inventory | Plotly gauges, days-of-supply chart, per-SKU reorder table with Status labels, explainability bullets explaining why each SKU is flagged |
-| 🤖 AI Brief | Groq-powered Monday morning S&OP memo — synthesizes all signals into buyer-ready planning language |
+| Command Center | Sortable/filterable inventory table across 25 SKUs, KPI strip (Critical count, Revenue at Risk, Avg DoS), environmental signal snapshot, row-select detail panel, deterministic Buyer's Brief |
+| Inventory | Plotly gauges for top SKUs by urgency, Days of Supply chart, Revenue at Risk chart, per-SKU reorder cards with explainability bullets |
+| Demand Signals | Live NOAA tides, moon phase strip, pressure trend, species activity by month, Exa web fishing reports, Reddit fishing feed, 7-day fishing forecast, tournament calendar |
+| Scenario Simulator | Signal weight sliders with real-time demand chart, preset scenario toggles (tournament weekend, viral bait, cold front, striper run), SKU-level status changes table |
+| AI Brief | Groq-powered Monday morning S&OP memo — synthesizes all signals into buyer-ready planning language, streamable output, "Ask Dave" Q&A, Intel Sources provenance |
 
 ---
 
@@ -54,13 +54,13 @@ Safety stock, reorder point, EOQ, and days of supply are computed from per-SKU s
 - **EOQ** = √(2 × annual_demand × order_cost / holding_cost)
 - **Days of Supply** = on_hand / avg_daily_demand
 
-Status labels — Critical / Reorder Soon / Watch / Healthy — are computed per SKU with explainability bullets explaining the signal drivers.
+Status labels — Critical / Reorder Soon / Watch / Healthy — are computed per SKU across 25 realistic products (7 categories) with explainability bullets covering business context, calculation basis, and demand signal. Perishable SKUs (bloodworms, sandworms, minnows) carry additional urgency logic for overstock spoilage risk.
 
 ---
 
 ## Tech Stack
 
-Python · Streamlit · Plotly · NOAA CO-OPS API · NDBC Buoy · Open-Meteo · ephem · PRAW · pytrends · Exa · Groq (LLaMA 3.3 70B)
+Python · Streamlit · Plotly · NOAA CO-OPS API · NDBC Buoy · Open-Meteo · ephem · Reddit Public JSON API · pytrends · Exa · Groq (LLaMA 3.3 70B)
 
 ---
 
@@ -102,7 +102,7 @@ pytest tests/ -v
 
 ## Screenshots
 
-*Screenshots will be added after final Streamlit Cloud deployment.*
+*TODO: Add screenshots of Command Center, Demand Signals, and AI Brief tabs after Streamlit Cloud deployment.*
 
 ---
 
@@ -114,7 +114,7 @@ See [`docs/ai-development-log.md`](docs/ai-development-log.md) for a full breakd
 
 ## Resume Summary
 
-> Built AI-powered bait shop demand intelligence dashboard — integrates NOAA tide predictions, moon phase, Reddit social velocity (PRAW), and Google Trends signals into interactive Plotly scenario simulations and Groq-powered weekly planning briefs with per-SKU reorder explainability; deployed on Streamlit Cloud.
+> Built AI-powered bait shop demand intelligence dashboard — integrates NOAA tide predictions, moon phase, barometric pressure, Reddit social velocity, Exa web reports, and species calendars into interactive Plotly scenario simulations and Groq-powered weekly planning briefs with per-SKU reorder explainability; deployed on Streamlit Cloud.
 
 **Interview story:** I worked at a bait shop for four years. We'd sell out of paddle tails right when striper season peaked and over-order all winter. I built a demand planning system that combines environmental data with social signal velocity to predict demand before it happens — the same forward-looking approach Amazon and Pepsi use internally, applied to a domain I actually know.
 
@@ -127,7 +127,7 @@ See [`docs/ai-development-log.md`](docs/ai-development-log.md) for a full breakd
 - **Explainable decision support** — every reorder recommendation includes a business reason, calculation reason, and demand signal reason; confidence scores make uncertainty visible
 - **Streamlit dashboard development** — multi-tab layout, sidebar what-if controls, Plotly interactive charts, custom CSS card components, real-time recalculation on slider changes
 - **Testable Python business logic** — all supply chain math and signal weighting lives outside `app.py` in importable modules with a full pytest suite
-- **Practical use of forecasting signals** — NOAA tides, moon phase, barometric pressure, Reddit social velocity, and Google Trends combined into a single weighted demand index
+- **Practical use of forecasting signals** — NOAA tides, moon phase, barometric pressure, Reddit social velocity, Exa web reports, and species calendars combined into a single weighted demand index
 - **Human-in-the-loop AI design** — AI explains what the math already decided; domain knowledge (4 years in a bait shop) informed every multiplier value and SKU assumption
 
 ## Future Improvements

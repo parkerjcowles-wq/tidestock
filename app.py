@@ -290,6 +290,11 @@ def load_web_reports():
         return []
 
 
+SEASON_MAP = {1: "off", 2: "off", 3: "shoulder", 4: "shoulder", 5: "peak",
+              6: "peak", 7: "shoulder", 8: "shoulder", 9: "peak", 10: "peak",
+              11: "shoulder", 12: "off"}
+
+
 def build_all_recs(demand_mult: float, delay_days: int, service_pct: float,
                    fishing_score: int, species_now: dict,
                    sku_signals: dict = None, weather_mult: float = 1.0) -> list:
@@ -298,10 +303,7 @@ def build_all_recs(demand_mult: float, delay_days: int, service_pct: float,
     month_now = datetime.date.today().month
     striper_active = species_now.get("Striped Bass", "Inactive") in ("Peak", "Good")
 
-    season_map = {1: "off", 2: "off", 3: "shoulder", 4: "shoulder", 5: "peak",
-                  6: "peak", 7: "shoulder", 8: "shoulder", 9: "peak", 10: "peak",
-                  11: "shoulder", 12: "off"}
-    season_level = season_map.get(month_now, "shoulder")
+    season_level = SEASON_MAP.get(month_now, "shoulder")
 
     recs = []
     for sku_key, sku in inventory.items():
@@ -474,7 +476,7 @@ with st.sidebar:
         st.markdown("")
 
     st.markdown(f'<div style="font-size:11px;color:#8b8b8f;line-height:1.6">'
-                f'{len(all_recs)} SKUs · Newburyport, MA<br>'
+                f'{len(config.SKU_CATEGORIES)} SKUs · Newburyport, MA<br>'
                 'Environmental: live NOAA/Open-Meteo<br>'
                 'Social: live Reddit API<br>'
                 'AI Brief: Groq · LLaMA 3'
@@ -498,6 +500,11 @@ all_recs = build_all_recs(
     weather_mult=cond["weather_mult"],
 )
 
+CAT_CODES = {
+    "soft_plastics": "SOFT", "hard_baits": "HARD", "bait": "BAIT",
+    "terminal_tackle": "TERM", "bucktails_jigs": "JIGS",
+    "line_leaders": "LINE", "accessories": "ACCS",
+}
 STATUS_BADGE_CLASS = {
     "Critical":    "badge-critical",
     "Reorder Soon": "badge-reorder",
@@ -669,7 +676,7 @@ with tab1:
 
     selected_rows = event.selection.rows
     selected_idx = selected_rows[0] if selected_rows else 0
-    if True:
+    if all_recs:
         r = all_recs[selected_idx]
         sbadge = STATUS_BADGE_CLASS.get(r["status"], "badge-neutral")
         cc = {"High": "#4ade80", "Medium": "#fbbf24", "Low": "#8b8b8f"}[r["confidence"]]
@@ -731,14 +738,12 @@ with tab2:
 
     st.markdown('<div class="section-header">Stock Gauges — Top SKUs by Urgency</div>', unsafe_allow_html=True)
     top9 = all_recs[:9]
-    inventory = load_inventory()
     gauge_cols = st.columns(3)
     for i, rec in enumerate(top9):
-        sku = inventory[rec["sku_key"]]
-        max_val = max(sku["on_hand"] * 1.5, rec["rop"] * 2.5, 1)
+        max_val = max(rec["on_hand"] * 1.5, rec["rop"] * 2.5, 1)
         with gauge_cols[i % 3]:
             st.plotly_chart(
-                build_gauge(_trunc(rec["product_name"], 34), sku["on_hand"], max_val, sku["unit"], rop=rec["rop"]),
+                build_gauge(_trunc(rec["product_name"], 40), rec["on_hand"], max_val, rec["unit"], rop=rec["rop"]),
                 use_container_width=True,
             )
 
@@ -765,12 +770,7 @@ with tab2:
             cc = {"High": "#4ade80", "Medium": "#fbbf24", "Low": "#8b8b8f"}[rec["confidence"]]
             perishable_note = ' · <span style="color:#fb923c;font-size:10px">Perishable</span>' if rec["is_perishable"] else ""
             sku_accent = sku_style.get("accent", "#8b8b8f")
-            _cat_codes = {
-                "soft_plastics": "SOFT", "hard_baits": "HARD", "bait": "BAIT",
-                "terminal_tackle": "TERM", "bucktails_jigs": "JIGS",
-                "line_leaders": "LINE", "accessories": "ACCS",
-            }
-            _cat_code = _cat_codes.get(rec["category"], rec["category"][:4].upper())
+            _cat_code = CAT_CODES.get(rec["category"], rec["category"][:4].upper())
             cat_tag = (
                 f'<span style="background:rgba(0,0,0,0.3);border:1px solid {sku_accent}33;'
                 f'color:{sku_accent};padding:1px 6px;border-radius:3px;font-size:9px;'
@@ -943,9 +943,13 @@ with tab3:
         if posts:
             st.markdown(build_reddit_feed_html(posts), unsafe_allow_html=True)
         else:
-            st.markdown('<div class="card" style="color:#8b8b8f;text-align:center;padding:20px">'
-                        'No Reddit posts loaded — public API may be temporarily throttled.</div>',
-                        unsafe_allow_html=True)
+            st.markdown(
+                '<div class="card" style="color:#8b8b8f;text-align:center;padding:20px">'
+                'No qualifying Reddit signals in the current fetch window.<br>'
+                '<span style="font-size:11px">Reddit public API returns vary by time of day — '
+                'web reports and environmental signals above remain active.</span></div>',
+                unsafe_allow_html=True,
+            )
 
     with social_right:
         st.markdown('<div class="section-header">7-Day Fishing Quality Forecast</div>', unsafe_allow_html=True)
@@ -994,15 +998,13 @@ with tab4:
         }
         weekend_boost = st.checkbox("Weekend Boost (+25%)", value=False)
 
-    season_map_s = {1: "off", 2: "off", 3: "shoulder", 4: "shoulder", 5: "peak",
-                    6: "peak", 7: "shoulder", 8: "shoulder", 9: "peak", 10: "peak",
-                    11: "shoulder", 12: "off"}
     boost = 1.25 if weekend_boost else 1.0
 
     # Build per-category base demands (sum weekly demand across SKUs in each category)
     cat_base = {}
     for r in all_recs:
         cat_base[r["category"]] = cat_base.get(r["category"], 0) + r["avg_weekly_demand"]
+    total_base = sum(cat_base.values())
 
     weighted_cat = {
         cat: compute_demand_index(
@@ -1012,14 +1014,13 @@ with tab4:
             social_velocity="baseline",
             pressure_trend=cond["weather"]["pressure_trend"],
             tournament_proximity="none",
-            season_level=season_map_s.get(month_now, "shoulder"),
+            season_level=SEASON_MAP.get(month_now, "shoulder"),
             weights=weights,
         )
         for cat, base in cat_base.items()
     }
 
     with col_chart:
-        total_base = sum(cat_base.values())
         total_weighted = sum(weighted_cat.values())
         avg_mult = total_weighted / total_base if total_base else 1.0
         direction = "above" if avg_mult > 1.1 else "below" if avg_mult < 0.9 else "near"
@@ -1031,9 +1032,8 @@ with tab4:
             f'</div>',
             unsafe_allow_html=True,
         )
-        sku_labels = {k: v for k, v in config.SKU_CATEGORIES.items()}
         st.plotly_chart(
-            build_scenario_comparison(cat_base, weighted_cat, sku_labels, subtitle="Signal Weights"),
+            build_scenario_comparison(cat_base, weighted_cat, config.SKU_CATEGORIES, subtitle="Signal Weights"),
             use_container_width=True,
         )
 
@@ -1096,7 +1096,7 @@ with tab4:
             )
         else:
             st.plotly_chart(
-                build_scenario_comparison(cat_base, cat_scenario, sku_labels, subtitle=SCENARIO_LABELS[active_scenario]),
+                build_scenario_comparison(cat_base, cat_scenario, config.SKU_CATEGORIES, subtitle=SCENARIO_LABELS[active_scenario]),
                 use_container_width=True,
             )
 
@@ -1147,22 +1147,19 @@ with tab5:
 
     def _dave_md(text: str) -> str:
         """Convert the AI's markdown output to HTML for rendering inside a styled div."""
-        import html as _html
+        from html import escape as _esc
         lines = text.split("\n")
         out = []
         for line in lines:
-            # Section headers: ## 📦 Reorder Now
             if line.startswith("## "):
-                content = line[3:].strip()
+                content = _esc(line[3:].strip())
                 out.append(
                     f'<div style="font-size:13px;font-weight:700;color:#f1f1f3;'
                     f'margin:18px 0 8px;padding-bottom:5px;border-bottom:1px solid #2a2a3e">'
                     f'{content}</div>'
                 )
-            # Bullet lines: • **Product** — reason
             elif line.startswith("• ") or line.startswith("- "):
-                content = line[2:].strip()
-                # Bold: **text**
+                content = _esc(line[2:].strip())
                 content = _re.sub(r'\*\*(.+?)\*\*', r'<strong style="color:#f1f1f3">\1</strong>', content)
                 out.append(
                     f'<div style="display:flex;gap:8px;margin-bottom:6px;padding-left:4px">'
@@ -1172,7 +1169,8 @@ with tab5:
             elif line.strip() == "" or line.strip() == "---":
                 out.append('<div style="height:6px"></div>')
             else:
-                content = _re.sub(r'\*\*(.+?)\*\*', r'<strong style="color:#f1f1f3">\1</strong>', line)
+                content = _esc(line)
+                content = _re.sub(r'\*\*(.+?)\*\*', r'<strong style="color:#f1f1f3">\1</strong>', content)
                 out.append(f'<div style="margin-bottom:4px">{content}</div>')
         return "".join(out)
 
@@ -1392,7 +1390,8 @@ with tab5:
         label_visibility="collapsed",
     )
     if user_q and user_q != st.session_state.get("dave_last_q"):
-        q_prompt = build_ask_dave_prompt(user_q, conditions_ctx, social_velocity, species_now)
+        from html import escape as _esc
+        q_prompt = build_ask_dave_prompt(user_q[:500], conditions_ctx, social_velocity, species_now)
         dave_answer = ""
         ans_placeholder = st.empty()
         for chunk in generate_brief_streaming(q_prompt):
@@ -1400,7 +1399,7 @@ with tab5:
             ans_placeholder.markdown(
                 f'<div style="background:#1c1c1e;border:1px solid #2a2a2e;border-left:3px solid #92400e;'
                 f'border-radius:8px;padding:14px 18px;font-size:13px;color:#c8c8cc;line-height:1.7">'
-                f'<span style="font-size:11px;font-weight:600;color:#b45309">Dave says:</span><br>{dave_answer}'
+                f'<span style="font-size:11px;font-weight:600;color:#b45309">Dave says:</span><br>{_esc(dave_answer)}'
                 f'</div>',
                 unsafe_allow_html=True,
             )

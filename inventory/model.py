@@ -1,4 +1,7 @@
 import math
+from statistics import NormalDist
+
+_norm = NormalDist()
 
 # One-sided z-scores for common inventory service levels
 SERVICE_LEVEL_Z = {0.85: 1.04, 0.90: 1.28, 0.95: 1.645, 0.99: 2.326}
@@ -20,3 +23,13 @@ def days_of_supply(on_hand: float, avg_daily_demand: float) -> float:
     if avg_daily_demand <= 0:
         return float("inf")
     return on_hand / avg_daily_demand
+
+
+def stockout_probability(on_hand: float, daily_demand: float, std_daily: float, lead_time: int) -> float:
+    """Probability that demand during lead time exceeds on_hand (0.0–1.0)."""
+    mean_lt = daily_demand * lead_time
+    std_lt = std_daily * math.sqrt(max(lead_time, 1))
+    if std_lt <= 0:
+        return 1.0 if on_hand < mean_lt else 0.0
+    z = (on_hand - mean_lt) / std_lt
+    return max(0.0, min(1.0, 1.0 - _norm.cdf(z)))
