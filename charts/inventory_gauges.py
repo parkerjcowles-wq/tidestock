@@ -33,7 +33,7 @@ def build_gauge(
         title={"text": label, "font": {"color": "#c8c8cc", "size": 11}},
     ))
     fig.update_layout(
-        paper_bgcolor="#1c1c1e", height=180,
+        paper_bgcolor="#111318", height=180,
         margin=dict(l=18, r=18, t=42, b=8),
     )
     return fig

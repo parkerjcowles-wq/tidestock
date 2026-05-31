@@ -10,7 +10,8 @@ def build_web_report_card(report: dict) -> str:
     color       = report.get("source_color", "#6b7280")
 
     body_html = (
-        f'<div style="font-size:12px;color:#a1a1aa;line-height:1.6;margin:8px 0 10px">'
+        f'<div style="font-size:12px;color:#a1a1aa;line-height:1.6;margin:8px 0 10px;'
+        f'max-height:42px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'
         f'{snippet}'
         f'</div>'
     ) if snippet else ""
@@ -47,6 +48,6 @@ def build_web_report_feed(reports: list, max_items: int = 10) -> str:
         return (
             '<div style="background:#1c1c1e;border:1px solid #2a2a2e;border-radius:8px;'
             'padding:16px;text-align:center;color:#6b7280;font-size:12px">'
-            'No recent web reports — Exa API key required or no results in the last 14 days.</div>'
+            'No recent web reports matched the current source filters.</div>'
         )
     return "".join(build_web_report_card(r) for r in reports[:max_items])

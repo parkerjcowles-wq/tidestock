@@ -21,9 +21,9 @@ def build_revenue_at_risk_chart(recs: list) -> go.Figure:
             showarrow=False, font=dict(color="#8b8b8f", size=13),
         )
         fig.update_layout(
-            paper_bgcolor="#1c1c1e", plot_bgcolor="#1c1c1e",
+            paper_bgcolor="#111318", plot_bgcolor="#111318",
             height=180, margin=dict(l=10, r=10, t=40, b=10),
-            title=dict(text="Revenue at Risk by SKU", font=dict(color="#8b8b8f", size=12)),
+            title=dict(text="Revenue at Risk by SKU", font=dict(color="#94a3b8", size=13)),
         )
         return fig
 
@@ -60,7 +60,7 @@ def build_revenue_at_risk_chart(recs: list) -> go.Figure:
     )
 
     fig.update_layout(
-        paper_bgcolor="#1c1c1e", plot_bgcolor="#1c1c1e",
+        paper_bgcolor="#111318", plot_bgcolor="#111318",
         margin=dict(l=10, r=80, t=50, b=10),
         height=max(200, 50 + len(filtered) * 32),
         xaxis=dict(
@@ -71,7 +71,7 @@ def build_revenue_at_risk_chart(recs: list) -> go.Figure:
         yaxis=dict(showgrid=False, tickfont=dict(color="#f1f1f3", size=11)),
         title=dict(
             text="Revenue at Risk by SKU — (ROP − on-hand) × retail price",
-            font=dict(color="#8b8b8f", size=12),
+            font=dict(color="#94a3b8", size=13),
         ),
     )
     return fig

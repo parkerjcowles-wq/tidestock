@@ -11,7 +11,7 @@ def _empty_fig(message: str) -> go.Figure:
         showarrow=False, font=dict(color="#475569", size=13), align="center",
     )
     fig.update_layout(
-        template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+        template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
         height=280, margin=dict(l=10, r=10, t=40, b=10),
         title=dict(
             text="Google Trends — Bait Keyword Search Velocity (90 days)",
@@ -56,7 +56,7 @@ def build_trends_chart(df: pd.DataFrame, keywords: list) -> go.Figure:
             )
 
     fig.update_layout(
-        template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+        template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
         margin=dict(l=10, r=10, t=50, b=10), height=280,
         xaxis=dict(showgrid=False, title=""),
         yaxis=dict(showgrid=True, gridcolor="#1e293b", title="Search Interest (0–100)"),

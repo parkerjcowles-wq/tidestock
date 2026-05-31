@@ -40,7 +40,7 @@ from inventory.recommendations import (
 )
 from inventory.forecast import compute_demand_index, compute_scenario_demand_by_category
 
-st.set_page_config(page_title="TideStock", page_icon="📦", layout="wide")
+st.set_page_config(page_title="TideStock", page_icon="⚓", layout="wide")
 
 # ── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -891,7 +891,13 @@ with tab3:
 
     # Species
     st.markdown('<div class="section-header">Species Activity</div>', unsafe_allow_html=True)
-    SPECIES_ICONS = {"Striped Bass": "🎣", "Flounder": "🐟", "Largemouth Bass": "🎣"}
+    ACTIVITY_COLORS = {
+        "Peak":     "#22c55e",
+        "Good":     "#86efac",
+        "Fair":     "#fbbf24",
+        "Low":      "#f97316",
+        "Inactive": "#6b7280",
+    }
     ACTIVITY_BG = {
         "Peak":     "rgba(34,197,94,0.09)",
         "Good":     "rgba(134,239,172,0.06)",
@@ -902,13 +908,13 @@ with tab3:
     sp_cols = st.columns(len(species_now))
     for col, (sp, level) in zip(sp_cols, species_now.items()):
         css_class = f"activity-{level.lower()}"
-        icon = SPECIES_ICONS.get(sp, "🐠")
+        dot_color = ACTIVITY_COLORS.get(level, "#6b7280")
         bg   = ACTIVITY_BG.get(level, "rgba(107,114,128,0.04)")
         with col:
             st.markdown(
                 f'<div class="card" style="text-align:center;padding:16px 10px;background:{bg}">'
-                f'<div style="font-size:26px;margin-bottom:8px">{icon}</div>'
-                f'<div style="font-size:11px;color:#8b8b8f;margin-bottom:8px">{sp}</div>'
+                f'<div style="font-size:13px;font-weight:600;color:#f1f1f3;margin-bottom:8px">{sp}</div>'
+                f'<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{dot_color};margin-right:6px;vertical-align:middle"></span>'
                 f'<span class="{css_class}">{level}</span></div>',
                 unsafe_allow_html=True,
             )
@@ -1205,31 +1211,9 @@ with tab5:
 
     # ── Dave avatar & header ─────────────────────────────────────────────────
     dave_svg = """
-<svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="36" cy="36" r="35" fill="#1c1c1e" stroke="#3a3a3e" stroke-width="1.5"/>
-  <!-- Hat brim -->
-  <ellipse cx="36" cy="26" rx="22" ry="5.5" fill="#78350f"/>
-  <!-- Hat crown -->
-  <rect x="20" y="13" width="32" height="14" rx="4" fill="#92400e"/>
-  <!-- Hat band -->
-  <rect x="20" y="24" width="32" height="4" fill="#451a03"/>
-  <!-- Hat highlight -->
-  <rect x="22" y="15" width="10" height="3" rx="1.5" fill="#b45309" opacity="0.5"/>
-  <!-- Skin -->
-  <ellipse cx="36" cy="46" rx="16" ry="14" fill="#d97706" opacity="0.25"/>
-  <!-- Eyes -->
-  <circle cx="30" cy="42" r="3" fill="#f1f1f3"/>
-  <circle cx="42" cy="42" r="3" fill="#f1f1f3"/>
-  <circle cx="30.8" cy="42" r="1.8" fill="#1c1c1e"/>
-  <circle cx="42.8" cy="42" r="1.8" fill="#1c1c1e"/>
-  <circle cx="31.3" cy="41.4" r="0.6" fill="white"/>
-  <circle cx="43.3" cy="41.4" r="0.6" fill="white"/>
-  <!-- Smile -->
-  <path d="M 29 51 Q 36 57 43 51" stroke="#f1f1f3" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- Rod -->
-  <line x1="52" y1="8" x2="68" y2="30" stroke="#92400e" stroke-width="2.2" stroke-linecap="round"/>
-  <line x1="68" y1="30" x2="70" y2="48" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2,2"/>
-  <circle cx="70" cy="49" r="1.5" fill="#60a5fa" opacity="0.7"/>
+<svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="28" cy="28" r="27" fill="#1a1a2e" stroke="#3a3a3e" stroke-width="1.5"/>
+  <text x="28" y="36" text-anchor="middle" fill="#f1f1f3" font-size="26" font-weight="700" font-family="system-ui, -apple-system, sans-serif">D</text>
 </svg>"""
 
     brief_time = st.session_state.get("dave_brief_time", "")
@@ -1238,7 +1222,7 @@ with tab5:
     score_color = "#4ade80" if fishing_score >= 80 else "#fbbf24" if fishing_score >= 60 else "#f87171"
 
     st.markdown(f"""
-<div style="background:linear-gradient(135deg,#1a1a2e 0%,#1c1c1e 60%,#0f2018 100%);
+<div style="background:#1c1c1e;
     border:1px solid #2a2a4e;border-radius:14px;padding:20px 24px;margin-bottom:18px">
   <div style="display:flex;align-items:center;gap:20px">
     <div style="flex-shrink:0">{dave_svg}</div>

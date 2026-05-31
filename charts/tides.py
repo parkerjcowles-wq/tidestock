@@ -12,7 +12,7 @@ def build_tide_chart(df: pd.DataFrame) -> go.Figure:
             showarrow=False, font=dict(color="#475569", size=13),
         )
         fig.update_layout(
-            template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+            template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
             height=250, margin=dict(l=10, r=10, t=40, b=10),
             title=dict(text="7-Day Tide Predictions", font=dict(color="#94a3b8", size=13)),
         )
@@ -39,7 +39,7 @@ def build_tide_chart(df: pd.DataFrame) -> go.Figure:
         )
 
     fig.update_layout(
-        template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+        template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
         margin=dict(l=10, r=10, t=40, b=10),
         xaxis=dict(showgrid=False, title=""),
         yaxis=dict(showgrid=True, gridcolor="#1e293b", title="Height (ft)", rangemode="tozero"),

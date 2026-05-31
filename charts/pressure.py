@@ -21,7 +21,7 @@ def build_pressure_chart(df: pd.DataFrame, trend: str) -> go.Figure:
             showarrow=False, font=dict(color="#475569", size=13),
         )
         fig.update_layout(
-            template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+            template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
             height=240, margin=dict(l=40, r=10, t=50, b=30),
             title=dict(text="Barometric Pressure · 48h", font=dict(color="#94a3b8", size=13)),
         )
@@ -63,7 +63,7 @@ def build_pressure_chart(df: pd.DataFrame, trend: str) -> go.Figure:
     )
 
     fig.update_layout(
-        template="plotly_dark", paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
+        template="plotly_dark", paper_bgcolor="#111318", plot_bgcolor="#111318",
         margin=dict(l=40, r=10, t=50, b=30),
         height=250,
         xaxis=dict(showgrid=False, title=""),

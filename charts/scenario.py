@@ -71,8 +71,8 @@ def build_scenario_comparison(
     fig.update_layout(
         barmode="group",
         template="plotly_dark",
-        paper_bgcolor="#0f172a",
-        plot_bgcolor="#0f172a",
+        paper_bgcolor="#111318",
+        plot_bgcolor="#111318",
         margin=dict(l=10, r=10, t=50, b=10),
         legend=dict(
             orientation="h",
