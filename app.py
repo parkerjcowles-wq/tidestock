@@ -545,7 +545,7 @@ with tab1:
     hc1, hc2 = st.columns(2)
     with hc1:
         crit_color = "#f87171" if n_critical > 0 else "#4ade80"
-        crit_glow  = "box-shadow:0 0 22px rgba(248,113,113,0.22);" if n_critical > 0 else ""
+        crit_glow  = "box-shadow:0 0 10px rgba(248,113,113,0.08);" if n_critical > 0 else ""
         st.markdown(
             f'<div class="kpi-card" style="border-color:{"#f87171" if n_critical else "#2a2a2e"};{crit_glow};padding:20px 16px">'
             f'<div class="kpi-label">Critical — Order Today</div>'
@@ -569,9 +569,9 @@ with tab1:
             f'<div class="kpi-sub">across 7 categories</div></div>', unsafe_allow_html=True)
     with sc2:
         ro_color = "#fb923c" if n_reorder > 0 else "#f1f1f3"
-        ro_glow  = "box-shadow:0 0 18px rgba(251,146,60,0.18);" if n_reorder > 0 else ""
+        ro_accent = "border-left:3px solid #fb923c;" if n_reorder > 0 else ""
         st.markdown(
-            f'<div class="kpi-card" style="{ro_glow}"><div class="kpi-label">Reorder Soon</div>'
+            f'<div class="kpi-card" style="{ro_accent}"><div class="kpi-label">Reorder Soon</div>'
             f'<div class="kpi-value" style="color:{ro_color}">{n_reorder}</div>'
             f'<div class="kpi-sub">this week</div></div>', unsafe_allow_html=True)
     with sc3:
