@@ -3,6 +3,6 @@ plotly==5.22.0
 pandas==2.2.2
 ephem==4.1.5
 pytrends==4.9.2
-groq==0.9.0
+groq==1.0.0
 requests==2.32.3
 python-dotenv==1.0.1
